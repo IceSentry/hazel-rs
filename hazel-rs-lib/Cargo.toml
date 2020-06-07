@@ -1,11 +1,9 @@
 [package]
-name = 'hazel-rs'
+name = 'hazel-rs-lib'
 version = '0.1.0'
 authors = ['IceSentry <c.giguere42@gmail.com>']
 edition = '2018'
 
 [dependencies]
 log = '0.4.8'
-
-[dependencies.hazel-rs-lib]
-path = 'hazel-rs-lib'
+env_logger = "0.7.1"

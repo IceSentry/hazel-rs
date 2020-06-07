@@ -1,3 +1,6 @@
+use hazel_rs_lib::Application;
+
 fn main() {
-    println!("Hello, world!");
+    let app = hazel_rs_lib::create_app();
+    app.run();
 }

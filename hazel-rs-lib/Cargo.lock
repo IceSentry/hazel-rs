@@ -40,14 +40,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hazel-rs"
-version = "0.1.0"
-dependencies = [
- "hazel-rs-lib",
- "log",
-]
-
-[[package]]
 name = "hazel-rs-lib"
 version = "0.1.0"
 dependencies = [
