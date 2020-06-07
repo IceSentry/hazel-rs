@@ -1,6 +1,6 @@
 use hazel_rs_lib::Application;
 
 fn main() {
-    let app = hazel_rs_lib::create_app();
+    let app = hazel_rs_lib::create_app("Sandbox");
     app.run();
 }
