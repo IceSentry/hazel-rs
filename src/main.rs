@@ -6,11 +6,11 @@ use hazel_rs_lib::{
 struct ExampleLayer {}
 
 impl Layer for ExampleLayer {
-    fn on_update(&mut self, _ctx: &mut Application) {
+    fn on_update(&mut self, _app: &mut Application) {
         // info!("ExampleLayer update");
     }
 
-    fn on_event(&mut self, _ctx: &mut Application, _event: &Event<()>) {
+    fn on_event(&mut self, _app: &mut Application, _event: &Event<()>) {
         // trace!("{:?}", event);
     }
 }
@@ -20,8 +20,8 @@ fn main() -> Result<(), anyhow::Error> {
 
     layer_stack.push_layer(Box::new(ExampleLayer {}));
     layer_stack.push_layer(Box::new(IcedUiLayer::new()));
-    layer_stack.push_layer(Box::new(DebugTextLayer::new()));
-    layer_stack.push_layer(Box::new(ImguiLayer::new()));
+    layer_stack.push_overlay(Box::new(DebugTextLayer::new()));
+    layer_stack.push_overlay(Box::new(ImguiLayer::new()));
 
     app.run(&mut layer_stack, &mut event_loop)
 }
