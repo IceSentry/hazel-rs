@@ -21,59 +21,62 @@ use winit::{
 pub struct Application {
     pub name: String,
     pub running: bool,
+    pub delta_t: Duration,
     scale_factor: f64,
     imgui_state: Option<ImguiState>,
-    pub delta_t: Duration,
     window: Box<Window>,
     renderer: Renderer,
 }
 
-pub fn run(
-    app: &mut Application,
-    layer_stack: &mut LayerStack,
-    event_loop: &mut EventLoop<()>,
-) -> Result<(), anyhow::Error> {
-    app.running = true;
+impl Application {
+    pub fn run(
+        &mut self,
+        layer_stack: &mut LayerStack,
+        event_loop: &mut EventLoop<()>,
+    ) -> Result<(), anyhow::Error> {
+        layer_stack.on_attach(self);
 
-    trace!("Game started!");
+        self.running = true;
 
-    #[allow(clippy::while_immutable_condition)]
-    event_loop.run_return(|event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
+        trace!("Game started!");
 
-        match event {
-            Event::WindowEvent { ref event, .. } => {
-                if handle_close(event) {
-                    app.running = false;
-                    *control_flow = ControlFlow::Exit;
-                } else {
-                    handle_resize(event, &mut app.renderer);
+        #[allow(clippy::while_immutable_condition)]
+        event_loop.run_return(|event, _, control_flow| {
+            *control_flow = ControlFlow::Poll;
+
+            match event {
+                Event::WindowEvent { ref event, .. } => {
+                    if handle_close(event) {
+                        self.running = false;
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    handle_resize(event, self);
                 }
-            }
-            Event::MainEventsCleared => {
-                app.window.request_redraw();
-            }
-            Event::RedrawRequested(_) => {
-                let delta_t = app.renderer.last_frame.elapsed();
-                app.renderer.last_frame = Instant::now();
-
-                app.delta_t = delta_t;
-                for layer in layer_stack.layers.iter() {
-                    layer.on_update(app);
+                Event::MainEventsCleared => {
+                    self.window.request_redraw();
                 }
+                Event::RedrawRequested(_) => {
+                    let delta_t = self.renderer.last_frame.elapsed();
+                    self.renderer.last_frame = Instant::now();
 
-                render(app, layer_stack);
-                app.renderer.last_frame_duration = delta_t;
+                    self.delta_t = delta_t;
+                    for layer in layer_stack.layers.iter() {
+                        layer.on_update(self);
+                    }
+
+                    render(self, layer_stack);
+                    self.renderer.last_frame_duration = delta_t;
+                }
+                _ => {}
             }
-            _ => {}
-        }
 
-        for layer in layer_stack.layers.iter() {
-            layer.on_event(app, &event);
-        }
-    });
+            for layer in layer_stack.layers.iter() {
+                layer.on_event(self, &event);
+            }
+        });
 
-    Ok(())
+        Ok(())
+    }
 }
 
 pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
@@ -131,17 +134,17 @@ fn handle_close(event: &WindowEvent) -> bool {
     }
 }
 
-fn handle_resize(event: &WindowEvent, renderer: &mut Renderer) {
+fn handle_resize(event: &WindowEvent, app: &mut Application) {
     match event {
         WindowEvent::Resized(physical_size) => {
-            renderer.resize(*physical_size, None);
+            app.renderer.resize(*physical_size, None);
         }
         WindowEvent::ScaleFactorChanged {
             new_inner_size,
             scale_factor,
             ..
         } => {
-            renderer.resize(**new_inner_size, Some(*scale_factor));
+            app.renderer.resize(**new_inner_size, Some(*scale_factor));
         }
         _ => {}
     }

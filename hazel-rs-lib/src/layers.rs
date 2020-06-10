@@ -37,15 +37,25 @@ impl LayerStack {
         }
     }
 
-    pub fn push_layer(&mut self, layer: Box<dyn Layer>, app: &mut Application) {
-        layer.on_attach(app);
+    pub fn push_layer(&mut self, layer: Box<dyn Layer>) {
         self.layers.insert(self.layer_insert, layer);
         self.layer_insert += 1;
     }
 
-    pub fn push_overlay(&mut self, layer: Box<dyn Layer>, app: &mut Application) {
-        layer.on_attach(app);
+    pub fn push_overlay(&mut self, layer: Box<dyn Layer>) {
         self.layers.push(layer);
+    }
+
+    pub fn on_attach(&mut self, app: &mut Application) {
+        for layer in self.layers.iter() {
+            layer.on_attach(app);
+        }
+    }
+
+    pub fn on_detach(&mut self, app: &mut Application) {
+        for layer in self.layers.iter() {
+            layer.on_detach(app);
+        }
     }
 
     #[allow(dead_code)]

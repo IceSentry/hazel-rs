@@ -14,8 +14,9 @@ impl Layer for ExampleLayer {
 
 fn main() -> Result<(), anyhow::Error> {
     let (mut app, mut layer_stack, mut event_loop) = hazel_rs_lib::create_app("Sandbox")?;
-    let layer = Box::new(ExampleLayer {});
-    layer_stack.push_layer(layer, &mut app);
-    layer_stack.push_layer(Box::new(ImguiLayer {}), &mut app);
-    hazel_rs_lib::run(&mut app, &mut layer_stack, &mut event_loop)
+
+    layer_stack.push_layer(Box::new(ExampleLayer {}));
+    layer_stack.push_layer(Box::new(ImguiLayer {}));
+
+    app.run(&mut layer_stack, &mut event_loop)
 }
