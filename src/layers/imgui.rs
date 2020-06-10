@@ -1,5 +1,5 @@
 use super::Layer;
-use crate::{Application, Event};
+use crate::Application;
 use derive_new::new;
 use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
@@ -18,7 +18,7 @@ impl Layer for ImguiLayer {
         log::trace!("imgui-layer attached");
     }
 
-    fn on_event(&mut self, app: &mut Application, event: &Event<()>) {
+    fn on_winit_event(&mut self, app: &mut Application, event: &winit::event::Event<()>) {
         if let Some(ImguiState {
             platform, context, ..
         }) = self.state.as_mut()

@@ -798,7 +798,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hazel-rs-lib"
+name = "hazel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -816,6 +816,7 @@ dependencies = [
  "wgpu",
  "wgpu_glyph",
  "winit",
+ "winit_input_helper",
 ]
 
 [[package]]
@@ -1691,7 +1692,7 @@ name = "sandbox"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hazel-rs-lib",
+ "hazel",
  "log",
 ]
 
@@ -2281,6 +2282,15 @@ dependencies = [
  "wayland-client",
  "winapi 0.3.8",
  "x11-dl",
+]
+
+[[package]]
+name = "winit_input_helper"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fbc1c28107b28f06c88ad7c4aacf95fbd4c0932935410138f9779ebf7775edc"
+dependencies = [
+ "winit",
 ]
 
 [[package]]

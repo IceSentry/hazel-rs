@@ -92,7 +92,7 @@ impl Layer for IcedUiLayer {
             .set_cursor_icon(iced_winit::conversion::mouse_interaction(mouse_interaction));
     }
 
-    fn on_event(&mut self, app: &mut Application, event: &Event<()>) {
+    fn on_winit_event(&mut self, app: &mut Application, event: &Event<()>) {
         let layer_state = match self.state.as_mut() {
             Some(it) => it,
             _ => return,

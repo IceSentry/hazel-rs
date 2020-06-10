@@ -1,17 +1,13 @@
 pub mod debug_text;
-pub mod imgui;
 pub mod iced_ui;
+pub mod imgui;
 
-use crate::Application;
-use winit::event::Event;
+use crate::{event::Event, Application};
 
 pub trait Layer {
     fn on_attach(&mut self, _app: &mut Application) {}
-
     fn on_detach(&mut self, _app: &mut Application) {}
-
     fn on_update(&mut self, _app: &mut Application) {}
-
     fn on_render(
         &mut self,
         _app: &mut Application,
@@ -19,8 +15,8 @@ pub trait Layer {
         _frame: &wgpu::SwapChainOutput,
     ) {
     }
-
-    fn on_event(&mut self, _app: &mut Application, _event: &Event<()>) {}
+    fn on_event(&mut self, _app: &mut Application, _event: &Event) {}
+    fn on_winit_event(&mut self, _app: &mut Application, _event: &winit::event::Event<()>) {}
 }
 
 #[allow(dead_code)]
@@ -63,6 +59,24 @@ impl LayerStack {
     pub fn on_detach(&mut self, app: &mut Application) {
         for layer in self.layers.iter_mut() {
             layer.on_detach(app);
+        }
+    }
+
+    pub fn on_update(&mut self, app: &mut Application) {
+        for layer in self.layers.iter_mut() {
+            layer.on_update(app);
+        }
+    }
+
+    pub fn on_event(&mut self, app: &mut Application, event: &Event) {
+        for layer in self.layers.iter_mut() {
+            layer.on_event(app, event);
+        }
+    }
+
+    pub fn on_winit_event(&mut self, app: &mut Application, event: &winit::event::Event<()>) {
+        for layer in self.layers.iter_mut() {
+            layer.on_winit_event(app, event);
         }
     }
 

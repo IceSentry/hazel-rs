@@ -1,10 +1,14 @@
+pub mod event;
+pub mod input;
 pub mod layers;
 mod renderer;
 
 use layers::LayerStack;
 use renderer::{render, Renderer};
 
+use event::Event;
 use futures::executor::block_on;
+use input::InputContext;
 use log::{LevelFilter, SetLoggerError};
 use log4rs::{
     append::{
@@ -19,13 +23,112 @@ use std::{
     path::Path,
     time::{Duration, Instant},
 };
-pub use winit::event::Event;
 use winit::{
-    event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{ElementState, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     platform::desktop::EventLoopExtDesktop,
     window::{Window, WindowBuilder},
 };
+
+pub struct Application {
+    pub name: String,
+    pub running: bool,
+    pub delta_t: Duration,
+    pub input_context: InputContext,
+    scale_factor: f64,
+    window: Box<Window>,
+    renderer: Renderer,
+}
+
+impl Application {
+    pub fn quit(&mut self) {
+        self.running = false;
+    }
+
+    fn process_event(&mut self, event: &winit::event::Event<()>) -> Option<Event> {
+        if let winit::event::Event::WindowEvent { ref event, .. } = event {
+            self.input_context.update(&event);
+            match event {
+                WindowEvent::Resized(physical_size) => {
+                    self.renderer.resize(*physical_size, None);
+                    return Some(Event::WindowResize);
+                }
+                WindowEvent::ScaleFactorChanged {
+                    new_inner_size,
+                    scale_factor,
+                    ..
+                } => {
+                    self.renderer.resize(**new_inner_size, Some(*scale_factor));
+                    return Some(Event::ScaleFactorChanged);
+                }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if let Some(keycode) = input.virtual_keycode {
+                        return match input.state {
+                            ElementState::Pressed => Some(Event::KeyPressed(keycode)),
+                            ElementState::Released => Some(Event::KeyReleased(keycode)),
+                        };
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    pub fn run(
+        &mut self,
+        layer_stack: &mut LayerStack,
+        event_loop: &mut EventLoop<()>,
+    ) -> Result<(), anyhow::Error> {
+        layer_stack.on_attach(self);
+
+        self.running = true;
+
+        log::trace!("Application started");
+
+        event_loop.run_return(|event, _, control_flow| {
+            *control_flow = if self.running {
+                ControlFlow::Poll
+            } else {
+                ControlFlow::Exit
+            };
+
+            layer_stack.on_winit_event(self, &event);
+
+            if let Some(event) = self.process_event(&event) {
+                layer_stack.on_event(self, &event);
+            }
+
+            match event {
+                winit::event::Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                } => {
+                    log::info!("Close requested; stopping");
+                    *control_flow = ControlFlow::Exit;
+                }
+                winit::event::Event::MainEventsCleared => {
+                    self.window.request_redraw();
+                }
+                winit::event::Event::RedrawRequested(_) => {
+                    self.delta_t = self.renderer.last_frame.elapsed();
+                    self.renderer.last_frame = Instant::now();
+
+                    layer_stack.on_update(self);
+
+                    render(self, layer_stack);
+                    self.renderer.last_frame_duration = self.delta_t;
+                }
+                _ => {}
+            }
+        });
+
+        layer_stack.on_detach(self);
+
+        log::trace!("Application stopped");
+        Ok(())
+    }
+}
 
 pub fn create_app(
     name: &str,
@@ -52,6 +155,7 @@ pub fn create_app(
             scale_factor: 1.0,
             delta_t: Duration::default(),
             renderer,
+            input_context: InputContext::new(),
         },
         layer_stack,
         event_loop,
@@ -113,101 +217,4 @@ fn configure_logging(use_env_logger: bool) -> anyhow::Result<(), SetLoggerError>
     log::trace!("Initialized logging");
 
     Ok(())
-}
-
-pub struct Application {
-    pub name: String,
-    pub running: bool,
-    pub delta_t: Duration,
-    scale_factor: f64,
-    window: Box<Window>,
-    renderer: Renderer,
-}
-
-impl Application {
-    pub fn run(
-        &mut self,
-        layer_stack: &mut LayerStack,
-        event_loop: &mut EventLoop<()>,
-    ) -> Result<(), anyhow::Error> {
-        layer_stack.on_attach(self);
-
-        self.running = true;
-
-        log::trace!("Application started");
-
-        event_loop.run_return(|event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
-
-            match event {
-                Event::WindowEvent { ref event, .. } => {
-                    if handle_close(event) {
-                        self.running = false;
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    handle_resize(event, self);
-                }
-                Event::MainEventsCleared => {
-                    self.window.request_redraw();
-                }
-                Event::RedrawRequested(_) => {
-                    let delta_t = self.renderer.last_frame.elapsed();
-                    self.renderer.last_frame = Instant::now();
-
-                    self.delta_t = delta_t;
-                    for layer in layer_stack.layers.iter_mut() {
-                        layer.on_update(self);
-                    }
-
-                    render(self, layer_stack);
-                    self.renderer.last_frame_duration = delta_t;
-                }
-                _ => {}
-            }
-
-            for layer in layer_stack.layers.iter_mut() {
-                layer.on_event(self, &event);
-            }
-        });
-
-        layer_stack.on_detach(self);
-
-        log::trace!("Application stopped");
-        Ok(())
-    }
-}
-
-fn handle_close(event: &WindowEvent) -> bool {
-    match event {
-        WindowEvent::KeyboardInput {
-            input:
-                KeyboardInput {
-                    virtual_keycode: Some(VirtualKeyCode::Escape),
-                    state: ElementState::Pressed,
-                    ..
-                },
-            ..
-        }
-        | WindowEvent::CloseRequested => {
-            log::info!("The close button was pressed; stopping");
-            true
-        }
-        _ => false,
-    }
-}
-
-fn handle_resize(event: &WindowEvent, app: &mut Application) {
-    match event {
-        WindowEvent::Resized(physical_size) => {
-            app.renderer.resize(*physical_size, None);
-        }
-        WindowEvent::ScaleFactorChanged {
-            new_inner_size,
-            scale_factor,
-            ..
-        } => {
-            app.renderer.resize(**new_inner_size, Some(*scale_factor));
-        }
-        _ => {}
-    }
 }

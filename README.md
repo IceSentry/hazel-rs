@@ -12,22 +12,22 @@ Overlays are layers that are added after layers on the stack.
 
 The lifecycles events are called on each layers in the order they were added to the stack.
 
-* `on_attach(&mut self, _app: &mut Application)`
-  * called before application start
-* `on_detach(&mut self, _app: &mut Application)`
-  * called after application is closed
-* `on_update(&mut self, _app: &mut Application)`
-  * called before render
-* `on_render(&mut self, _app: &mut Application, _encoder: &mut wgpu::CommandEncoder, _frame: &wgpu::SwapChainOutput,)`
-  * This is called right after the clear screen and before calling queue.submit() on wgpu
-* `on_event(&mut self, _app: &mut Application, _event: &Event<()>)`
-  * This is called when the winit event_loop gets an event that isn't already handled by the engine (i.e. closing on X)
+- `on_attach(&mut self, _app: &mut Application)`
+  - called before application start
+- `on_detach(&mut self, _app: &mut Application)`
+  - called after application is closed
+- `on_update(&mut self, _app: &mut Application)`
+  - called before render
+- `on_render(&mut self, _app: &mut Application, _encoder: &mut wgpu::CommandEncoder, _frame: &wgpu::SwapChainOutput,)`
+  - This is called right after the clear screen and before calling queue.submit() on wgpu
+- `on_event(&mut self, _app: &mut Application, _event: &Event<()>)`
+  - This is called when the winit event_loop gets an event that isn't already handled by the engine (i.e. closing on X)
 
 There are a few preconfigured layers to get you started:
 
-* DebugTextLayer: Displays some basic debug info like frametime and fps
-* ImguiLayer: Display anything related to imgui
-* IcedLayer: used to create game UIs. It is intended as an example only.
+- DebugTextLayer: Displays some basic debug info like frametime and fps
+- ImguiLayer: Display anything related to imgui
+- IcedLayer: used to create game UIs. It is intended as an example only.
 
 ## Example usage
 

@@ -1,0 +1,10 @@
+[package]
+authors = [ 'IceSentry <c.giguere42@gmail.com>' ]
+edition = '2018'
+name    = 'sandbox'
+version = '0.1.0'
+
+[dependencies]
+anyhow = "1.0.31"
+hazel  = { path = '../../' }
+log    = '0.4.8'
