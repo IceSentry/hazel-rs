@@ -19,7 +19,7 @@ fn main() -> Result<(), anyhow::Error> {
     let (mut app, mut layer_stack, mut event_loop) = hazel_rs_lib::create_app("Sandbox")?;
 
     layer_stack.push_layer(Box::new(ExampleLayer {}));
-    layer_stack.push_layer(Box::new(ImguiLayer {}));
+    layer_stack.push_layer(Box::new(ImguiLayer::new()));
     layer_stack.push_layer(Box::new(DebugTextLayer::new()));
 
     app.run(&mut layer_stack, &mut event_loop)

@@ -1,15 +1,30 @@
 use super::Layer;
 use crate::{Application, Event};
+use derive_new::new;
 use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::trace;
-use std::time::Duration;
 
-pub struct ImguiLayer {}
+struct ImguiState {
+    pub context: Box<imgui::Context>,
+    pub platform: Box<WinitPlatform>,
+    pub renderer: Box<imgui_wgpu::Renderer>,
+}
+
+#[derive(new)]
+pub struct ImguiLayer {
+    #[new(default)]
+    state: Option<ImguiState>,
+}
 
 impl Layer for ImguiLayer {
+    fn on_attach(&mut self, app: &mut Application) {
+        self.state = Some(ImguiState::new(app));
+        trace!("imgui-layer attached")
+    }
+
     fn on_event(&mut self, app: &mut Application, event: &Event<()>) {
-        let state = app.imgui_state.as_mut().unwrap();
+        let state = self.state.as_mut().unwrap();
         state
             .platform
             .handle_event(state.context.io_mut(), &app.window, &event);
@@ -21,19 +36,38 @@ impl Layer for ImguiLayer {
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SwapChainOutput,
     ) {
-        render(app, encoder, frame, app.delta_t);
-    }
+        let delta_t = app.delta_t;
+        let state = self.state.as_mut().unwrap();
+        state
+            .platform
+            .prepare_frame(state.context.io_mut(), &app.window)
+            .expect("Failed to prepare frame");
 
-    fn on_attach(&mut self, app: &mut Application) {
-        app.imgui_state = Some(ImguiState::new(app));
-        trace!("imgui-layer attached")
-    }
-}
+        state.context.io_mut().delta_time = delta_t.as_secs_f32();
+        let ui = state.context.frame();
 
-pub struct ImguiState {
-    pub context: Box<imgui::Context>,
-    pub platform: Box<WinitPlatform>,
-    pub renderer: Box<imgui_wgpu::Renderer>,
+        {
+            imgui::Window::new(im_str!("Debug info"))
+                .position([0.0, 0.0], Condition::FirstUseEver)
+                .build(&ui, || {
+                    ui.text(im_str!("Frametime: {:?}", delta_t));
+                    ui.separator();
+                    let mouse_pos = ui.io().mouse_pos;
+                    ui.text(im_str!(
+                        "Mouse Position: ({:.1},{:.1})",
+                        mouse_pos[0],
+                        mouse_pos[1]
+                    ));
+                });
+        }
+
+        state.platform.prepare_render(&ui, &app.window);
+
+        state
+            .renderer
+            .render(ui.render(), &app.renderer.device, encoder, &frame.view)
+            .expect("imgui rendering failed");
+    }
 }
 
 impl ImguiState {
@@ -72,42 +106,4 @@ impl ImguiState {
             renderer: Box::new(renderer),
         }
     }
-}
-
-pub fn render(
-    app: &mut Application,
-    encoder: &mut wgpu::CommandEncoder,
-    frame: &wgpu::SwapChainOutput,
-    delta_t: Duration,
-) {
-    let state = app.imgui_state.as_mut().unwrap();
-    state
-        .platform
-        .prepare_frame(state.context.io_mut(), &app.window)
-        .expect("Failed to prepare frame");
-
-    state.context.io_mut().delta_time = delta_t.as_secs_f32();
-    let ui = state.context.frame();
-
-    {
-        imgui::Window::new(im_str!("Debug info"))
-            .position([0.0, 0.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Frametime: {:?}", delta_t));
-                ui.separator();
-                let mouse_pos = ui.io().mouse_pos;
-                ui.text(im_str!(
-                    "Mouse Position: ({:.1},{:.1})",
-                    mouse_pos[0],
-                    mouse_pos[1]
-                ));
-            });
-    }
-
-    state.platform.prepare_render(&ui, &app.window);
-
-    state
-        .renderer
-        .render(ui.render(), &app.renderer.device, encoder, &frame.view)
-        .expect("imgui rendering failed");
 }

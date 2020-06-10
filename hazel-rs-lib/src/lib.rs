@@ -1,7 +1,7 @@
 pub mod layers;
 mod renderer;
 
-use layers::{imgui::ImguiState, LayerStack};
+use layers::LayerStack;
 use renderer::{render, Renderer};
 
 use futures::executor::block_on;
@@ -20,7 +20,6 @@ pub struct Application {
     pub running: bool,
     pub delta_t: Duration,
     scale_factor: f64,
-    imgui_state: Option<ImguiState>,
     window: Box<Window>,
     renderer: Renderer,
 }
@@ -105,7 +104,6 @@ pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>)
             window: Box::new(window),
             running: false,
             scale_factor: 1.0,
-            imgui_state: None,
             delta_t: Duration::default(),
             renderer,
         },
