@@ -1,11 +1,12 @@
 [package]
-name = 'hazel-rs'
+name = 'sandbox'
 version = '0.1.0'
 authors = ['IceSentry <c.giguere42@gmail.com>']
 edition = '2018'
 
 [dependencies]
 log = '0.4.8'
+anyhow = "1.0.31"
 
 [dependencies.hazel-rs-lib]
 path = 'hazel-rs-lib'
