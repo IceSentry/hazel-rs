@@ -1,5 +1,5 @@
 use hazel_rs_lib::{
-    layers::{debug_text::DebugTextLayer, imgui::ImguiLayer, Layer},
+    layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, imgui::ImguiLayer, Layer},
     Application, Event,
 };
 
@@ -16,11 +16,12 @@ impl Layer for ExampleLayer {
 }
 
 fn main() -> Result<(), anyhow::Error> {
-    let (mut app, mut layer_stack, mut event_loop) = hazel_rs_lib::create_app("Sandbox")?;
+    let (mut app, mut layer_stack, mut event_loop) = hazel_rs_lib::create_app("Sandbox", true)?;
 
     layer_stack.push_layer(Box::new(ExampleLayer {}));
-    layer_stack.push_layer(Box::new(ImguiLayer::new()));
+    layer_stack.push_layer(Box::new(IcedUiLayer::new()));
     layer_stack.push_layer(Box::new(DebugTextLayer::new()));
+    layer_stack.push_layer(Box::new(ImguiLayer::new()));
 
     app.run(&mut layer_stack, &mut event_loop)
 }

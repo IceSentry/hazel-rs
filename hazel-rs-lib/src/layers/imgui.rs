@@ -105,7 +105,7 @@ impl ImguiState {
             &app.renderer.device,
             &mut app.renderer.queue,
             app.renderer.sc_desc.format,
-            Some(app.renderer.clear_color),
+            None,
         );
 
         Self {

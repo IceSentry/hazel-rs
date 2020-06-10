@@ -47,7 +47,7 @@ impl Renderer {
             format: render_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Mailbox,
+            present_mode: wgpu::PresentMode::Fifo,
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
@@ -98,22 +98,28 @@ pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
             label: Some("Render Encoder"),
         });
 
-    {
-        let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                attachment: &frame.view,
-                resolve_target: None,
-                load_op: wgpu::LoadOp::Clear,
-                store_op: wgpu::StoreOp::Store,
-                clear_color: app.renderer.clear_color,
-            }],
-            depth_stencil_attachment: None,
-        });
-    }
+    clear(&frame.view, &mut encoder, app.renderer.clear_color);
 
     for layer in layer_stack.layers.iter_mut() {
         layer.on_render(app, &mut encoder, &frame);
     }
 
     app.renderer.queue.submit(&[encoder.finish()]);
+}
+
+pub fn clear<'a>(
+    target: &'a wgpu::TextureView,
+    encoder: &'a mut wgpu::CommandEncoder,
+    clear_color: wgpu::Color,
+) -> wgpu::RenderPass<'a> {
+    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+            attachment: target,
+            resolve_target: None,
+            load_op: wgpu::LoadOp::Clear,
+            store_op: wgpu::StoreOp::Store,
+            clear_color,
+        }],
+        depth_stencil_attachment: None,
+    })
 }

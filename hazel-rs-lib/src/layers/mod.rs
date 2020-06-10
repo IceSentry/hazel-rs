@@ -1,5 +1,6 @@
 pub mod debug_text;
 pub mod imgui;
+pub mod iced_ui;
 
 use crate::Application;
 use winit::event::Event;
