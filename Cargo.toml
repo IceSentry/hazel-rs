@@ -5,18 +5,18 @@ name    = 'hazel'
 version = '0.1.0'
 
 [dependencies]
-anyhow              = '1.0.31'
-derive-new          = "0.5.8"
-env_logger          = '0.7.1'
+anyhow     = '1.0.31'
+derive-new = "0.5.8"
+
 futures             = '0.3.5'
 gfx-memory          = "=0.1.1"
 imgui               = '0.4.0'
 imgui-winit-support = '0.4.0'
 log                 = '0.4.8'
-log4rs              = '0.12.0'
-wgpu_glyph          = '0.9.0'
-winit               = '0.22.2'
-winit_input_helper  = "0.7.0"
+
+wgpu_glyph         = '0.9.0'
+winit              = '0.22.2'
+winit_input_helper = "0.7.0"
 
   [dependencies.iced_winit]
   git = 'https://github.com/hecrj/iced'

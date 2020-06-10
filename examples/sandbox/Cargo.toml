@@ -5,6 +5,8 @@ name    = 'sandbox'
 version = '0.1.0'
 
 [dependencies]
-anyhow = "1.0.31"
-hazel  = { path = '../../' }
-log    = '0.4.8'
+anyhow     = "1.0.31"
+env_logger = '0.7.1'
+hazel      = { path = '../../' }
+log        = '0.4.8'
+log4rs     = '0.12.0'

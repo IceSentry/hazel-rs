@@ -803,7 +803,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "derive-new",
- "env_logger",
  "futures",
  "gfx-memory",
  "iced_wgpu",
@@ -812,7 +811,6 @@ dependencies = [
  "imgui-wgpu",
  "imgui-winit-support",
  "log",
- "log4rs",
  "wgpu",
  "wgpu_glyph",
  "winit",
@@ -1692,8 +1690,10 @@ name = "sandbox"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "env_logger",
  "hazel",
  "log",
+ "log4rs",
 ]
 
 [[package]]
