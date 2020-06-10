@@ -9,11 +9,7 @@ pub use crate::imgui::ImguiLayer;
 use crate::imgui::ImguiState;
 use futures::executor::block_on;
 use log::{info, trace};
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 pub use winit::event::Event;
 use winit::{
     event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -32,62 +28,55 @@ pub struct Application {
     renderer: Renderer,
 }
 
-pub type AppRef = Rc<RefCell<Application>>;
-
 pub fn run(
-    app: AppRef,
+    app: &mut Application,
     layer_stack: &mut LayerStack,
     event_loop: &mut EventLoop<()>,
 ) -> Result<(), anyhow::Error> {
-    app.borrow_mut().running = true;
+    app.running = true;
 
     trace!("Game started!");
 
     #[allow(clippy::while_immutable_condition)]
-    while app.borrow().running {
-        event_loop.run_return(|event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
+    event_loop.run_return(|event, _, control_flow| {
+        *control_flow = ControlFlow::Poll;
 
-            let app_clone = app.clone();
-            let mut app_b = app_clone.borrow_mut();
-
-            match event {
-                Event::WindowEvent { ref event, .. } => {
-                    if handle_close(event) {
-                        app.borrow_mut().running = false;
-                        *control_flow = ControlFlow::Exit;
-                    } else {
-                        handle_resize(event, &mut app_b.renderer);
-                    }
+        match event {
+            Event::WindowEvent { ref event, .. } => {
+                if handle_close(event) {
+                    app.running = false;
+                    *control_flow = ControlFlow::Exit;
+                } else {
+                    handle_resize(event, &mut app.renderer);
                 }
-                Event::MainEventsCleared => {
-                    app_b.window.request_redraw();
-                }
-                Event::RedrawRequested(_) => {
-                    let delta_t = app_b.renderer.last_frame.elapsed();
-                    app_b.renderer.last_frame = Instant::now();
-
-                    app_b.delta_t = delta_t;
-                    for layer in layer_stack.layers.iter() {
-                        layer.on_update(&mut app_b);
-                    }
-
-                    render(&mut app_b, layer_stack);
-                    app_b.renderer.last_frame_duration = delta_t;
-                }
-                _ => {}
             }
-
-            for layer in layer_stack.layers.iter() {
-                layer.on_event(&mut app_b, &event);
+            Event::MainEventsCleared => {
+                app.window.request_redraw();
             }
-        });
-    }
+            Event::RedrawRequested(_) => {
+                let delta_t = app.renderer.last_frame.elapsed();
+                app.renderer.last_frame = Instant::now();
+
+                app.delta_t = delta_t;
+                for layer in layer_stack.layers.iter() {
+                    layer.on_update(app);
+                }
+
+                render(app, layer_stack);
+                app.renderer.last_frame_duration = delta_t;
+            }
+            _ => {}
+        }
+
+        for layer in layer_stack.layers.iter() {
+            layer.on_event(app, &event);
+        }
+    });
 
     Ok(())
 }
 
-pub fn create_app(name: &str) -> Result<(AppRef, LayerStack, EventLoop<()>), anyhow::Error> {
+pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Trace)
         .filter_module("wgpu", log::LevelFilter::Warn)
@@ -109,7 +98,7 @@ pub fn create_app(name: &str) -> Result<(AppRef, LayerStack, EventLoop<()>), any
     let layer_stack = LayerStack::new();
 
     Ok((
-        Rc::new(RefCell::new(Application {
+        Application {
             name: String::from(name),
             window: Box::new(window),
             running: false,
@@ -117,7 +106,7 @@ pub fn create_app(name: &str) -> Result<(AppRef, LayerStack, EventLoop<()>), any
             imgui_state: None,
             delta_t: Duration::default(),
             renderer,
-        })),
+        },
         layer_stack,
         event_loop,
     ))
