@@ -1,12 +1,9 @@
-mod imgui;
 pub mod layers;
 mod renderer;
 
-use layers::LayerStack;
+use layers::{imgui::ImguiState, LayerStack};
 use renderer::{render, Renderer};
 
-pub use crate::imgui::ImguiLayer;
-use crate::imgui::ImguiState;
 use futures::executor::block_on;
 use log::{info, trace};
 use std::time::{Duration, Instant};
@@ -38,9 +35,8 @@ impl Application {
 
         self.running = true;
 
-        trace!("Game started!");
+        trace!("Application started");
 
-        #[allow(clippy::while_immutable_condition)]
         event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
 
@@ -60,7 +56,7 @@ impl Application {
                     self.renderer.last_frame = Instant::now();
 
                     self.delta_t = delta_t;
-                    for layer in layer_stack.layers.iter() {
+                    for layer in layer_stack.layers.iter_mut() {
                         layer.on_update(self);
                     }
 
@@ -70,11 +66,14 @@ impl Application {
                 _ => {}
             }
 
-            for layer in layer_stack.layers.iter() {
+            for layer in layer_stack.layers.iter_mut() {
                 layer.on_event(self, &event);
             }
         });
 
+        layer_stack.on_detach(self);
+
+        trace!("Application stopped");
         Ok(())
     }
 }

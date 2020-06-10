@@ -1,4 +1,5 @@
-use crate::{layers::Layer, Application, Event};
+use super::Layer;
+use crate::{Application, Event};
 use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::trace;
@@ -7,7 +8,7 @@ use std::time::Duration;
 pub struct ImguiLayer {}
 
 impl Layer for ImguiLayer {
-    fn on_event(&self, app: &mut Application, event: &Event<()>) {
+    fn on_event(&mut self, app: &mut Application, event: &Event<()>) {
         let state = app.imgui_state.as_mut().unwrap();
         state
             .platform
@@ -15,7 +16,7 @@ impl Layer for ImguiLayer {
     }
 
     fn on_render(
-        &self,
+        &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SwapChainOutput,
@@ -23,7 +24,7 @@ impl Layer for ImguiLayer {
         render(app, encoder, frame, app.delta_t);
     }
 
-    fn on_attach(&self, app: &mut Application) {
+    fn on_attach(&mut self, app: &mut Application) {
         app.imgui_state = Some(ImguiState::new(app));
         trace!("imgui-layer attached")
     }

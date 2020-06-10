@@ -1,22 +1,24 @@
 [package]
-name = 'hazel-rs-lib'
-version = '0.1.0'
-authors = ['IceSentry <c.giguere42@gmail.com>']
+authors = [ 'IceSentry <c.giguere42@gmail.com>' ]
 edition = '2018'
+name    = 'hazel-rs-lib'
+version = '0.1.0'
 
 [dependencies]
-log = '0.4.8'
-env_logger = '0.7.1'
-winit = '0.22.2'
-imgui = '0.4.0'
+anyhow              = '1.0.31'
+env_logger          = '0.7.1'
+futures             = '0.3.5'
+imgui               = '0.4.0'
 imgui-winit-support = '0.4.0'
-wgpu_glyph = '0.9.0'
-futures = '0.3.5'
-anyhow = "1.0.31"
+log                 = '0.4.8'
+wgpu_glyph          = '0.9.0'
+winit               = '0.22.2'
+# This should work, but somehow doesn't
+# imgui-wgpu = "0.6.0"
 
-[dependencies.imgui-wgpu]
-git = 'https://github.com/Yatekii/imgui-wgpu-rs'
+  [dependencies.imgui-wgpu]
+  git = 'https://github.com/Yatekii/imgui-wgpu-rs'
 
-[dependencies.wgpu]
-version = '0.5.0'
-features = ['vulkan']
+  [dependencies.wgpu]
+  features = [ 'vulkan' ]
+  version  = '0.5.0'

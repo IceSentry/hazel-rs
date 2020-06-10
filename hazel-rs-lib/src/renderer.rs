@@ -112,7 +112,7 @@ pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
         });
     }
 
-    for layer in layer_stack.layers.iter() {
+    for layer in layer_stack.layers.iter_mut() {
         layer.on_render(app, &mut encoder, &frame);
     }
 
