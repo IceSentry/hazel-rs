@@ -1,6 +1,5 @@
 use super::Layer;
 use crate::Application;
-use log::error;
 use wgpu_glyph::{ab_glyph, GlyphBrush, GlyphBrushBuilder, Section, Text};
 
 #[derive(Default)]
@@ -21,7 +20,7 @@ impl Layer for DebugTextLayer {
         )) {
             Ok(font) => font,
             Err(_) => {
-                error!("Font failed to load");
+                log::error!("Font failed to load");
                 return;
             }
         };
@@ -30,6 +29,8 @@ impl Layer for DebugTextLayer {
             GlyphBrushBuilder::using_font(font)
                 .build(&app.renderer.device, app.renderer.render_format),
         );
+
+        log::trace!("debug_text attached");
     }
 
     fn on_render(
@@ -66,7 +67,7 @@ impl Layer for DebugTextLayer {
             )
             .is_err()
         {
-            error!("Failed to draw debug_text");
+            log::error!("Failed to draw debug_text");
         }
     }
 }

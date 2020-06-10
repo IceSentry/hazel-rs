@@ -5,8 +5,20 @@ use layers::LayerStack;
 use renderer::{render, Renderer};
 
 use futures::executor::block_on;
-use log::{info, trace};
-use std::time::{Duration, Instant};
+use log::{LevelFilter, SetLoggerError};
+use log4rs::{
+    append::{
+        console::{ConsoleAppender, Target},
+        file::FileAppender,
+    },
+    config::{Appender, Config, Logger, Root},
+    encode::pattern::PatternEncoder,
+    filter::threshold::ThresholdFilter,
+};
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 pub use winit::event::Event;
 use winit::{
     event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -14,6 +26,89 @@ use winit::{
     platform::desktop::EventLoopExtDesktop,
     window::{Window, WindowBuilder},
 };
+
+pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
+    configure_logging()?;
+
+    let event_loop = EventLoop::new();
+    let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
+
+    log::trace!("Window created");
+
+    let renderer = block_on(Renderer::new(&window));
+
+    log::trace!("Renderer created");
+
+    let layer_stack = LayerStack::new();
+
+    Ok((
+        Application {
+            name: String::from(name),
+            window: Box::new(window),
+            running: false,
+            scale_factor: 1.0,
+            delta_t: Duration::default(),
+            renderer,
+        },
+        layer_stack,
+        event_loop,
+    ))
+}
+
+fn configure_logging() -> anyhow::Result<(), SetLoggerError> {
+    println!("initializing logging");
+
+    let level = log::LevelFilter::Trace;
+    let file_path = Path::new("log/out.log");
+    let pattern = "[{d(%Y-%m-%d %H:%M:%S)} {h({l:<5})} {t}] {m}{n}";
+
+    let stdout = ConsoleAppender::builder()
+        .encoder(Box::new(PatternEncoder::new(pattern)))
+        .target(Target::Stdout)
+        .build();
+
+    let logfile = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new(pattern)))
+        .append(false)
+        .build(file_path)
+        .expect("Failed to build log file logger");
+
+    let config = Config::builder()
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        .appender(
+            Appender::builder()
+                .filter(Box::new(ThresholdFilter::new(level)))
+                .build("stdout", Box::new(stdout)),
+        )
+        .logger(Logger::builder().build("wgpu", LevelFilter::Warn))
+        .logger(Logger::builder().build("wgpu_core", LevelFilter::Warn))
+        .logger(Logger::builder().build("gfx_descriptor", LevelFilter::Warn))
+        .logger(Logger::builder().build("gfx_memory", LevelFilter::Warn))
+        .logger(Logger::builder().build("gfx_backend_vulkan", LevelFilter::Warn))
+        .build(
+            Root::builder()
+                .appender("logfile")
+                .appender("stdout")
+                .build(LevelFilter::Trace),
+        )
+        .expect("Failed to build logging config");
+
+    let _handle = log4rs::init_config(config)?;
+
+    log::trace!("Initialized logging");
+
+    Ok(())
+}
+
+fn log_env() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Trace)
+        .filter_module("wgpu", log::LevelFilter::Warn)
+        .filter_module("gfx_descriptor", log::LevelFilter::Warn)
+        .filter_module("gfx_memory", log::LevelFilter::Warn)
+        .filter_module("gfx_backend_vulkan", log::LevelFilter::Warn)
+        .init();
+}
 
 pub struct Application {
     pub name: String,
@@ -34,7 +129,7 @@ impl Application {
 
         self.running = true;
 
-        trace!("Application started");
+        log::trace!("Application started");
 
         event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
@@ -72,44 +167,9 @@ impl Application {
 
         layer_stack.on_detach(self);
 
-        trace!("Application stopped");
+        log::trace!("Application stopped");
         Ok(())
     }
-}
-
-pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Trace)
-        .filter_module("wgpu", log::LevelFilter::Warn)
-        .filter_module("gfx_descriptor", log::LevelFilter::Warn)
-        .filter_module("gfx_memory", log::LevelFilter::Warn)
-        .filter_module("gfx_backend_vulkan", log::LevelFilter::Warn)
-        .init();
-    trace!("Initialized logging");
-
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
-
-    trace!("Window created");
-
-    let renderer = block_on(Renderer::new(&window));
-
-    trace!("Renderer created");
-
-    let layer_stack = LayerStack::new();
-
-    Ok((
-        Application {
-            name: String::from(name),
-            window: Box::new(window),
-            running: false,
-            scale_factor: 1.0,
-            delta_t: Duration::default(),
-            renderer,
-        },
-        layer_stack,
-        event_loop,
-    ))
 }
 
 fn handle_close(event: &WindowEvent) -> bool {
@@ -124,7 +184,7 @@ fn handle_close(event: &WindowEvent) -> bool {
             ..
         }
         | WindowEvent::CloseRequested => {
-            info!("The close button was pressed; stopping");
+            log::info!("The close button was pressed; stopping");
             true
         }
         _ => false,

@@ -1,5 +1,4 @@
 use crate::{layers::LayerStack, Application};
-use log::error;
 use std::time::{Duration, Instant};
 use winit::window::Window;
 
@@ -87,7 +86,7 @@ pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
     let frame = match app.renderer.swap_chain.get_next_texture() {
         Ok(frame) => frame,
         Err(e) => {
-            error!("dropped frame: {:?}", e);
+            log::error!("dropped frame: {:?}", e);
             return;
         }
     };

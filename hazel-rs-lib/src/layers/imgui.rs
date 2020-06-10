@@ -3,18 +3,19 @@ use crate::{Application, Event};
 use derive_new::new;
 use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use log::trace;
 
 #[derive(new)]
 pub struct ImguiLayer {
     #[new(default)]
     state: Option<ImguiState>,
+    #[new(value = "false")]
+    show_demo_window: bool,
 }
 
 impl Layer for ImguiLayer {
     fn on_attach(&mut self, app: &mut Application) {
         self.state = Some(ImguiState::new(app));
-        trace!("imgui-layer attached")
+        log::trace!("imgui-layer attached");
     }
 
     fn on_event(&mut self, app: &mut Application, event: &Event<()>) {
@@ -60,6 +61,8 @@ impl Layer for ImguiLayer {
                         ));
                     });
             }
+
+            ui.show_demo_window(&mut self.show_demo_window);
 
             platform.prepare_render(&ui, &app.window);
             renderer
