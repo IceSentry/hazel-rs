@@ -34,8 +34,9 @@ impl Application {
     }
 
     fn process_event(&mut self, event: &winit::event::Event<()>) -> Option<Event> {
+        self.input_context.update(&event);
+
         if let winit::event::Event::WindowEvent { ref event, .. } = event {
-            self.input_context.update(&event);
             match event {
                 WindowEvent::Resized(physical_size) => {
                     self.renderer.resize(*physical_size, None);
@@ -56,6 +57,20 @@ impl Application {
                             ElementState::Released => Some(Event::KeyReleased(keycode)),
                         };
                     }
+                }
+                WindowEvent::MouseInput { button, state, .. } => {
+                    return match state {
+                        ElementState::Pressed => Some(Event::MouseButtonPressed(
+                            *button,
+                            self.input_context.mouse_position.0,
+                            self.input_context.mouse_position.1,
+                        )),
+                        ElementState::Released => Some(Event::MouseButtonReleased(
+                            *button,
+                            self.input_context.mouse_position.0,
+                            self.input_context.mouse_position.1,
+                        )),
+                    };
                 }
                 _ => {}
             }
