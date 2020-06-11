@@ -3,14 +3,19 @@ pub mod input;
 pub mod layers;
 mod renderer;
 
-use layers::LayerStack;
+use layers::{imgui::ImguiLayer, LayerStack};
 use renderer::{render, Renderer};
 
 use event::Event;
 use futures::executor::block_on;
 use input::InputContext;
 
-use std::time::{Duration, Instant};
+use std::{
+    cell::RefCell,
+    path::PathBuf,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 use winit::{
     event::{ElementState, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -23,6 +28,7 @@ pub struct Application {
     pub running: bool,
     pub delta_t: Duration,
     pub input_context: InputContext,
+    imgui_layer: Rc<RefCell<ImguiLayer>>,
     scale_factor: f64,
     window: Box<Window>,
     renderer: Renderer,
@@ -131,7 +137,10 @@ impl Application {
     }
 }
 
-pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
+pub fn create_app(
+    name: &str,
+    imgui_ini_path: Option<PathBuf>,
+) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
 
@@ -141,7 +150,9 @@ pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>)
 
     log::trace!("Renderer created");
 
-    let layer_stack = LayerStack::new();
+    let mut layer_stack = LayerStack::new();
+    let imgui_layer = Rc::new(RefCell::new(ImguiLayer::new(imgui_ini_path)));
+    layer_stack.push_overlay(imgui_layer.clone());
 
     Ok((
         Application {
@@ -152,6 +163,7 @@ pub fn create_app(name: &str) -> Result<(Application, LayerStack, EventLoop<()>)
             delta_t: Duration::default(),
             renderer,
             input_context: InputContext::new(),
+            imgui_layer,
         },
         layer_stack,
         event_loop,

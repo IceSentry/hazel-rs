@@ -1,7 +1,7 @@
 use super::Layer;
 use crate::Application;
 use derive_new::new;
-use imgui::{im_str, Condition, FontSource};
+use imgui::{im_str, Condition, FontSource, Ui};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::path::PathBuf;
 
@@ -29,6 +29,20 @@ impl Layer for ImguiLayer {
         }
     }
 
+    fn on_update(&mut self, app: &mut Application) {
+        let delta_t = app.delta_t;
+        if let Some(ImguiState {
+            platform, context, ..
+        }) = self.state.as_mut()
+        {
+            platform
+                .prepare_frame(context.io_mut(), &app.window)
+                .expect("Failed to prepare frame");
+
+            context.io_mut().delta_time = delta_t.as_secs_f32();
+        }
+    }
+
     fn on_render(
         &mut self,
         app: &mut Application,
@@ -42,11 +56,6 @@ impl Layer for ImguiLayer {
             renderer,
         }) = self.state.as_mut()
         {
-            platform
-                .prepare_frame(context.io_mut(), &app.window)
-                .expect("Failed to prepare frame");
-
-            context.io_mut().delta_time = delta_t.as_secs_f32();
             let ui = context.frame();
 
             {

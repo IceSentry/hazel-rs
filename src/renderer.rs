@@ -100,9 +100,7 @@ pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
 
     clear(&frame.view, &mut encoder, app.renderer.clear_color);
 
-    for layer in layer_stack.layers.iter_mut() {
-        layer.on_render(app, &mut encoder, &frame);
-    }
+    layer_stack.on_render(app, &mut encoder, &frame);
 
     app.renderer.queue.submit(&[encoder.finish()]);
 }
