@@ -3,6 +3,7 @@ use crate::Application;
 use derive_new::new;
 use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
+use std::path::PathBuf;
 
 #[derive(new)]
 pub struct ImguiLayer {
@@ -10,11 +11,12 @@ pub struct ImguiLayer {
     state: Option<ImguiState>,
     #[new(value = "false")]
     show_demo_window: bool,
+    ini_path: Option<PathBuf>,
 }
 
 impl Layer for ImguiLayer {
     fn on_attach(&mut self, app: &mut Application) {
-        self.state = Some(ImguiState::new(app));
+        self.state = Some(ImguiState::new(app, self.ini_path.clone()));
         log::trace!("imgui-layer attached");
     }
 
@@ -79,13 +81,13 @@ struct ImguiState {
 }
 
 impl ImguiState {
-    fn new(app: &mut Application) -> Self {
+    fn new(app: &mut Application, ini_path: Option<PathBuf>) -> Self {
         let mut imgui = imgui::Context::create();
         imgui.style_mut().use_dark_colors();
 
         let mut platform = WinitPlatform::init(&mut imgui);
         platform.attach_window(imgui.io_mut(), &app.window, HiDpiMode::Default);
-        imgui.set_ini_filename(None);
+        imgui.set_ini_filename(ini_path);
 
         let font_size = (13.0 * app.scale_factor) as f32;
         let io = imgui.io_mut();

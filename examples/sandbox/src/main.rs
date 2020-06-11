@@ -4,6 +4,7 @@ use hazel::{
     layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, imgui::ImguiLayer, Layer},
     Application,
 };
+use std::path::PathBuf;
 
 struct ExampleLayer {}
 
@@ -34,7 +35,9 @@ fn main() -> Result<(), anyhow::Error> {
     layer_stack.push_layer(Box::new(ExampleLayer {}));
     layer_stack.push_layer(Box::new(IcedUiLayer::new()));
     layer_stack.push_overlay(Box::new(DebugTextLayer::new()));
-    layer_stack.push_overlay(Box::new(ImguiLayer::new()));
+    layer_stack.push_overlay(Box::new(ImguiLayer::new(Some(PathBuf::from(
+        "./imgui.ini",
+    )))));
 
     app.run(&mut layer_stack, &mut event_loop)
 }
