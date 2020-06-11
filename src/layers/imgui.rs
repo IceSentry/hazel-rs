@@ -1,9 +1,16 @@
 use super::Layer;
 use crate::Application;
 use derive_new::new;
-use imgui::{im_str, Condition, FontSource, Ui};
+use imgui::{im_str, Condition, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::path::PathBuf;
+
+static mut CURRENT_UI: Option<imgui::Ui<'static>> = None;
+
+/// # Safety
+pub unsafe fn current_ui<'a>() -> Option<&'a imgui::Ui<'a>> {
+    CURRENT_UI.as_ref()
+}
 
 #[derive(new)]
 pub struct ImguiLayer {
@@ -44,45 +51,49 @@ impl Layer for ImguiLayer {
                 .expect("Failed to prepare frame");
 
             context.io_mut().delta_time = delta_t.as_secs_f32();
+            unsafe {
+                CURRENT_UI = Some(std::mem::transmute(context.frame()));
+            }
         }
     }
 
-    fn on_render(
+    fn on_imgui_render(&mut self, app: &mut Application, ui: &imgui::Ui) {
+        {
+            imgui::Window::new(im_str!("Debug info"))
+                .position([0.0, 0.0], Condition::FirstUseEver)
+                .build(&ui, || {
+                    ui.text(im_str!("Frametime: {:?}", app.delta_t));
+                    ui.separator();
+                    let mouse_pos = ui.io().mouse_pos;
+                    ui.text(im_str!(
+                        "Mouse Position: ({:.1},{:.1})",
+                        mouse_pos[0],
+                        mouse_pos[1]
+                    ));
+                });
+        }
+
+        ui.show_demo_window(&mut self.show_demo_window);
+    }
+
+    fn on_wgpu_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SwapChainOutput,
     ) {
-        let delta_t = app.delta_t;
         if let Some(ImguiState {
-            platform,
-            context,
-            renderer,
+            platform, renderer, ..
         }) = self.state.as_mut()
         {
-            let ui = context.frame();
-
-            {
-                imgui::Window::new(im_str!("Debug info"))
-                    .position([0.0, 0.0], Condition::FirstUseEver)
-                    .build(&ui, || {
-                        ui.text(im_str!("Frametime: {:?}", delta_t));
-                        ui.separator();
-                        let mouse_pos = ui.io().mouse_pos;
-                        ui.text(im_str!(
-                            "Mouse Position: ({:.1},{:.1})",
-                            mouse_pos[0],
-                            mouse_pos[1]
-                        ));
-                    });
+            unsafe {
+                if let Some(ui) = CURRENT_UI.take() {
+                    platform.prepare_render(&ui, &app.window);
+                    renderer
+                        .render(ui.render(), &app.renderer.device, encoder, &frame.view)
+                        .expect("imgui rendering failed");
+                }
             }
-
-            ui.show_demo_window(&mut self.show_demo_window);
-
-            platform.prepare_render(&ui, &app.window);
-            renderer
-                .render(ui.render(), &app.renderer.device, encoder, &frame.view)
-                .expect("imgui rendering failed");
         }
     }
 }

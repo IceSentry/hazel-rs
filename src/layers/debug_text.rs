@@ -37,7 +37,7 @@ impl Layer for DebugTextLayer {
         log::trace!("debug_text attached");
     }
 
-    fn on_render(
+    fn on_wgpu_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,

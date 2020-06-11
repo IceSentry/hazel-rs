@@ -100,7 +100,8 @@ pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
 
     clear(&frame.view, &mut encoder, app.renderer.clear_color);
 
-    layer_stack.on_render(app, &mut encoder, &frame);
+    layer_stack.on_imgui_render(app);
+    layer_stack.on_wgpu_render(app, &mut encoder, &frame);
 
     app.renderer.queue.submit(&[encoder.finish()]);
 }

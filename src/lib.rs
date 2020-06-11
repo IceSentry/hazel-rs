@@ -10,6 +10,8 @@ use event::Event;
 use futures::executor::block_on;
 use input::InputContext;
 
+pub use imgui::Ui;
+
 use std::{
     cell::RefCell,
     path::PathBuf,
@@ -28,7 +30,6 @@ pub struct Application {
     pub running: bool,
     pub delta_t: Duration,
     pub input_context: InputContext,
-    imgui_layer: Rc<RefCell<ImguiLayer>>,
     scale_factor: f64,
     window: Box<Window>,
     renderer: Renderer,
@@ -151,8 +152,7 @@ pub fn create_app(
     log::trace!("Renderer created");
 
     let mut layer_stack = LayerStack::new();
-    let imgui_layer = Rc::new(RefCell::new(ImguiLayer::new(imgui_ini_path)));
-    layer_stack.push_overlay(imgui_layer.clone());
+    layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(imgui_ini_path))));
 
     Ok((
         Application {
@@ -163,7 +163,6 @@ pub fn create_app(
             delta_t: Duration::default(),
             renderer,
             input_context: InputContext::new(),
-            imgui_layer,
         },
         layer_stack,
         event_loop,

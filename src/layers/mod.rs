@@ -2,6 +2,7 @@ pub mod debug_text;
 pub mod iced_ui;
 pub mod imgui;
 
+use crate::Ui;
 use crate::{event::Event, Application};
 use std::{cell::RefCell, rc::Rc};
 
@@ -10,7 +11,7 @@ pub trait Layer {
     fn on_attach(&mut self, _app: &mut Application) {}
     fn on_detach(&mut self, _app: &mut Application) {}
     fn on_update(&mut self, _app: &mut Application) {}
-    fn on_render(
+    fn on_wgpu_render(
         &mut self,
         _app: &mut Application,
         _encoder: &mut wgpu::CommandEncoder,
@@ -19,6 +20,7 @@ pub trait Layer {
     }
     fn on_event(&mut self, _app: &mut Application, _event: &Event) {}
     fn on_winit_event(&mut self, _app: &mut Application, _event: &winit::event::Event<()>) {}
+    fn on_imgui_render(&mut self, _app: &mut Application, _ui: &Ui) {}
 }
 
 type LayerRef = Rc<RefCell<dyn Layer>>;
@@ -76,14 +78,26 @@ impl LayerStack {
         }
     }
 
-    pub fn on_render(
+    pub fn on_imgui_render(&self, app: &mut Application) {
+        unsafe {
+            if let Some(ui) = imgui::current_ui() {
+                for layer in self.layers.iter() {
+                    if layer.try_borrow_mut().is_ok() {
+                        layer.borrow_mut().on_imgui_render(app, ui);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn on_wgpu_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SwapChainOutput,
     ) {
         for layer in self.layers.iter() {
-            layer.borrow_mut().on_render(app, encoder, frame);
+            layer.borrow_mut().on_wgpu_render(app, encoder, frame);
         }
     }
 
