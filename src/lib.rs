@@ -62,13 +62,11 @@ impl Application {
                     return match state {
                         ElementState::Pressed => Some(Event::MouseButtonPressed(
                             *button,
-                            self.input_context.mouse_position.0,
-                            self.input_context.mouse_position.1,
+                            self.input_context.mouse_position,
                         )),
                         ElementState::Released => Some(Event::MouseButtonReleased(
                             *button,
-                            self.input_context.mouse_position.0,
-                            self.input_context.mouse_position.1,
+                            self.input_context.mouse_position,
                         )),
                     };
                 }

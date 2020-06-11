@@ -1,4 +1,5 @@
 use derive_new::new;
+use mint::Point2;
 use std::collections::HashSet;
 pub use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
@@ -11,8 +12,8 @@ pub struct InputContext {
 
     #[new(value = "HashSet::new()")]
     mouse_pressed: HashSet<MouseButton>,
-    #[new(value = "(0.0, 0.0)")]
-    pub mouse_position: (f64, f64),
+    #[new(value = "Point2::from_slice(&[0.0, 0.0])")]
+    pub mouse_position: Point2<f64>,
 }
 
 impl InputContext {
@@ -40,8 +41,7 @@ impl InputContext {
                     };
                 }
                 WindowEvent::CursorMoved { position, .. } => {
-                    self.mouse_position.0 = position.x;
-                    self.mouse_position.1 = position.y;
+                    self.mouse_position = Point2::from_slice(&[position.x, position.y]);
                 }
                 _ => {}
             },

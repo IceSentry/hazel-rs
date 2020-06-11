@@ -811,6 +811,7 @@ dependencies = [
  "imgui-wgpu",
  "imgui-winit-support",
  "log",
+ "mint",
  "wgpu",
  "wgpu_glyph",
  "winit",
@@ -1174,6 +1175,12 @@ checksum = "aa679ff6578b1cddee93d7e82e263b94a575e0bfced07284eb0c037c1d2416a5"
 dependencies = [
  "adler32",
 ]
+
+[[package]]
+name = "mint"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d42e54f364a39ad5238e3072db2e8747785b37655368da756987d3b09ada91e0"
 
 [[package]]
 name = "mio"
