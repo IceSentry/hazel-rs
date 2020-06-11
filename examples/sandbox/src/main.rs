@@ -1,7 +1,7 @@
 use hazel::{
     event::Event,
     input::VirtualKeyCode,
-    layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, imgui::ImguiLayer, Layer},
+    layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, Layer},
     Application,
 };
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
@@ -9,6 +9,10 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc};
 struct ExampleLayer {}
 
 impl Layer for ExampleLayer {
+    fn get_name(&self) -> String {
+        String::from("example-layer")
+    }
+
     fn on_update(&mut self, app: &mut Application) {
         if app.input_context.is_key_pressed(VirtualKeyCode::A) {
             log::debug!("A poll");

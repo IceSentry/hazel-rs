@@ -15,6 +15,10 @@ pub struct ImguiLayer {
 }
 
 impl Layer for ImguiLayer {
+    fn get_name(&self) -> String {
+        String::from("imgui-layer")
+    }
+
     fn on_attach(&mut self, app: &mut Application) {
         self.state = Some(ImguiState::new(app, self.ini_path.clone()));
         log::trace!("imgui-layer attached");

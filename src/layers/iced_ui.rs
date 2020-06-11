@@ -22,6 +22,10 @@ pub struct IcedUiLayer {
 }
 
 impl Layer for IcedUiLayer {
+    fn get_name(&self) -> String {
+        String::from("iced-ui-layer")
+    }
+
     fn on_attach(&mut self, app: &mut Application) {
         let physical_size = app.window.inner_size();
         let viewport = Viewport::with_physical_size(

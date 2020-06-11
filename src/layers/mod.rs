@@ -6,6 +6,7 @@ use crate::{event::Event, Application};
 use std::{cell::RefCell, rc::Rc};
 
 pub trait Layer {
+    fn get_name(&self) -> String;
     fn on_attach(&mut self, _app: &mut Application) {}
     fn on_detach(&mut self, _app: &mut Application) {}
     fn on_update(&mut self, _app: &mut Application) {}

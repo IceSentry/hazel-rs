@@ -14,6 +14,10 @@ impl DebugTextLayer {
 }
 
 impl Layer for DebugTextLayer {
+    fn get_name(&self) -> String {
+        String::from("debug-text-layer")
+    }
+
     fn on_attach(&mut self, app: &mut Application) {
         let font = match ab_glyph::FontArc::try_from_slice(include_bytes!(
             "../assets/Inconsolata-Regular.ttf"
