@@ -45,19 +45,7 @@ impl Layer for DebugTextLayer {
     ) {
         let glyph_brush = self.glyph_brush.as_mut().unwrap();
         glyph_brush.queue(Section {
-            text: vec![Text::new(&format!("{:?}", app.delta_t))],
-            ..Section::default()
-        });
-
-        let curr_fps = 1.0 / app.delta_t.as_secs_f64();
-        let last_fps = 1.0 / app.renderer.last_frame_duration.as_secs_f64();
-
-        glyph_brush.queue(Section {
-            text: vec![Text::new(&format!(
-                "{:.0}fps",
-                last_fps * 0.9 + curr_fps * 0.1
-            ))],
-            screen_position: (0.0, 20.0),
+            text: vec![Text::new(&format!("Hello world from: {:?}", app.name))],
             ..Section::default()
         });
 
