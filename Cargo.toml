@@ -10,15 +10,14 @@ derive-new = "0.5.8"
 
 futures             = '0.3.5'
 gfx-memory          = "=0.1.1"
+glam                = "0.8.7"
 imgui               = '0.4.0'
 imgui-winit-support = '0.4.0'
 log                 = '0.4.8'
-
-wgpu_glyph         = '0.9.0'
-winit              = '0.22.2'
-winit_input_helper = "0.7.0"
-mint = "0.5.5"
-glam = "0.8.7"
+mint                = "0.5.5"
+wgpu_glyph          = '0.9.0'
+winit               = '0.22.2'
+winit_input_helper  = "0.7.0"
 
   [dependencies.iced_winit]
   git = 'https://github.com/hecrj/iced'

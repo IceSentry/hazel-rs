@@ -19,6 +19,7 @@ pub struct ImguiLayer {
     #[new(value = "false")]
     show_demo_window: bool,
     ini_path: Option<PathBuf>,
+    v_sync_checked: bool,
 }
 
 impl Layer for ImguiLayer {
@@ -46,6 +47,11 @@ impl Layer for ImguiLayer {
             platform, context, ..
         }) = self.state.as_mut()
         {
+            if self.v_sync_checked != app.v_sync {
+                app.v_sync = self.v_sync_checked;
+                app.renderer.toggle_v_sync(app.v_sync);
+            }
+
             platform
                 .prepare_frame(context.io_mut(), &app.window)
                 .expect("Failed to prepare frame");
@@ -70,6 +76,7 @@ impl Layer for ImguiLayer {
                         mouse_pos[0],
                         mouse_pos[1]
                     ));
+                    ui.checkbox(im_str!("v-sync"), &mut self.v_sync_checked);
                 });
         }
 

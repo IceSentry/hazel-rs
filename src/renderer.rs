@@ -17,7 +17,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub async fn new(window: &Window) -> Self {
+    pub async fn new(window: &Window, v_sync: bool) -> Self {
         let size = window.inner_size();
         let surface = wgpu::Surface::create(window);
         let adapter = wgpu::Adapter::request(
@@ -47,7 +47,11 @@ impl Renderer {
             format: render_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: if v_sync {
+                wgpu::PresentMode::Fifo
+            } else {
+                wgpu::PresentMode::Mailbox
+            },
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
@@ -78,6 +82,16 @@ impl Renderer {
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
+        self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+    }
+
+    pub fn toggle_v_sync(&mut self, enabled: bool) {
+        self.sc_desc.present_mode = if enabled {
+            wgpu::PresentMode::Fifo
+        } else {
+            wgpu::PresentMode::Mailbox
+        };
+
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 }

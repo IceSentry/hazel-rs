@@ -30,6 +30,7 @@ pub struct Application {
     pub running: bool,
     pub delta_t: Duration,
     pub input_context: InputContext,
+    pub v_sync: bool,
     scale_factor: f64,
     window: Box<Window>,
     renderer: Renderer,
@@ -144,15 +145,19 @@ pub fn create_app(
 ) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
+    let v_sync = true;
 
     log::trace!("Window created");
 
-    let renderer = block_on(Renderer::new(&window));
+    let renderer = block_on(Renderer::new(&window, v_sync));
 
     log::trace!("Renderer created");
 
     let mut layer_stack = LayerStack::new();
-    layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(imgui_ini_path))));
+    layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(
+        imgui_ini_path,
+        v_sync,
+    ))));
 
     Ok((
         Application {
@@ -163,6 +168,7 @@ pub fn create_app(
             delta_t: Duration::default(),
             renderer,
             input_context: InputContext::new(),
+            v_sync,
         },
         layer_stack,
         event_loop,
