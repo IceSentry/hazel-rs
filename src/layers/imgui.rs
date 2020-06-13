@@ -64,26 +64,24 @@ impl Layer for ImguiLayer {
     }
 
     fn on_imgui_render(&mut self, app: &mut Application, ui: &imgui::Ui) {
-        {
-            let curr_fps = 1.0 / app.delta_t.as_secs_f64();
-            let last_fps = 1.0 / app.renderer.last_frame_duration.as_secs_f64();
-            let fps = last_fps * 0.5 + curr_fps * 0.5; // this is supposed to smooth it out
+        let curr_fps = 1.0 / app.delta_t.as_secs_f64();
+        let last_fps = 1.0 / app.renderer.last_frame_duration.as_secs_f64();
+        let fps = last_fps * 0.5 + curr_fps * 0.5; // this is supposed to smooth it out
 
-            imgui::Window::new(im_str!("Debug info"))
-                .position([0.0, 0.0], Condition::FirstUseEver)
-                .build(&ui, || {
-                    ui.text(im_str!("Frametime: {:.2?}", app.delta_t));
-                    ui.text(im_str!("FPS: {:.0?}", fps));
-                    ui.separator();
-                    let mouse_pos = ui.io().mouse_pos;
-                    ui.text(im_str!(
-                        "Mouse Position: ({:.1},{:.1})",
-                        mouse_pos[0],
-                        mouse_pos[1]
-                    ));
-                    ui.checkbox(im_str!("v-sync"), &mut self.v_sync_checked);
-                });
-        }
+        imgui::Window::new(im_str!("Debug info"))
+            .position([0.0, 0.0], Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text(im_str!("Frametime: {:.2?}", app.delta_t));
+                ui.text(im_str!("FPS: {:.0?}", fps));
+                ui.separator();
+                let mouse_pos = ui.io().mouse_pos;
+                ui.text(im_str!(
+                    "Mouse Position: ({:.1},{:.1})",
+                    mouse_pos[0],
+                    mouse_pos[1]
+                ));
+                ui.checkbox(im_str!("v-sync"), &mut self.v_sync_checked);
+            });
 
         ui.show_demo_window(&mut self.show_demo_window);
     }

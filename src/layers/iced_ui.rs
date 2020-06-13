@@ -59,18 +59,18 @@ impl Layer for IcedUiLayer {
         {
             if !state.is_queue_empty() {
                 state.update(None, viewport.logical_size(), renderer, debug);
-            }
-            let program = state.program();
-            app.renderer.clear_color = {
-                let [r, g, b, a] = program.background_color.into_linear();
+                let program = state.program();
+                app.renderer.clear_color = {
+                    let [r, g, b, a] = program.background_color.into_linear();
 
-                wgpu::Color {
-                    r: r as f64,
-                    g: g as f64,
-                    b: b as f64,
-                    a: a as f64,
-                }
-            };
+                    wgpu::Color {
+                        r: r as f64,
+                        g: g as f64,
+                        b: b as f64,
+                        a: a as f64,
+                    }
+                };
+            }
         }
     }
 
