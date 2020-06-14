@@ -74,8 +74,8 @@ impl Renderer {
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         let shader = Shader::compile(
-            String::from(include_str!("shaders/shader.vert")),
-            String::from(include_str!("shaders/shader.frag")),
+            String::from(include_str!("shaders/vert.glsl")),
+            String::from(include_str!("shaders/frag.glsl")),
         )?;
 
         log::trace!("Shaders compiled");
