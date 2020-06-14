@@ -42,6 +42,20 @@ pub struct Application {
 }
 
 impl Application {
+    /// Create a new Application
+    /// It returns the new application with a layer_stack and an event_loop
+    /// you most likely don't have to touch the event_loop and can simply pass it to the run function
+    ///
+    /// These are returned and then passed to the run function to make lifetimes easier to manage
+    /// Example usage:
+    /// ```rust
+    ///     use hazel::Application;
+    ///     fn main() -> anyhow::Result<()> {
+    ///         let (mut app, mut layer_stack, mut event_loop) =
+    ///         Application::new("Example", None)?;
+    ///         app.run(&mut layer_stack, &mut event_loop)
+    ///     }
+    /// ```
     pub fn new(
         name: &str,
         imgui_ini_path: Option<PathBuf>,
@@ -112,6 +126,9 @@ impl Application {
         ))
     }
 
+    /// The main loop
+    /// You need to call this otherwise nothing will happen
+    /// This is where event are handled and this is where every licecycle hook is called
     pub fn run(
         &mut self,
         layer_stack: &mut LayerStack,
