@@ -127,8 +127,6 @@ impl Application {
             *control_flow = if self.running {
                 ControlFlow::Poll
             } else {
-                log::info!("Close requested");
-                log::info!("Application stopping");
                 ControlFlow::Exit
             };
 
@@ -143,7 +141,7 @@ impl Application {
                     event: WindowEvent::CloseRequested,
                     ..
                 } => {
-                    *control_flow = ControlFlow::Exit;
+                    self.close();
                 }
                 winit::event::Event::MainEventsCleared => {
                     self.window.request_redraw();
@@ -182,7 +180,9 @@ impl Application {
         Ok(())
     }
 
-    pub fn quit(&mut self) {
+    pub fn close(&mut self) {
+        log::info!("Close requested");
+        log::info!("Application stopping");
         self.running = false;
     }
 }

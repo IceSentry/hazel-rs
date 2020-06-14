@@ -24,7 +24,7 @@ impl Layer for ExampleLayer {
             Event::KeyReleased(VirtualKeyCode::A) => log::debug!("A event"),
             Event::KeyReleased(VirtualKeyCode::Escape) => {
                 log::debug!("Escape pressed");
-                app.quit();
+                app.close();
             }
             _ => {}
         }
