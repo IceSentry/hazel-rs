@@ -1,3 +1,4 @@
+use super::buffer::{IndexBuffer, VertexBuffer};
 use anyhow::{Context, Result};
 use wgpu::vertex_attr_array;
 
@@ -22,9 +23,8 @@ impl Vertex {
 }
 
 pub struct Mesh {
-    pub vertex_buffer: wgpu::Buffer,
-
-    pub vertices_count: u32,
+    pub vertex_buffer: VertexBuffer,
+    pub index_buffer: IndexBuffer,
 }
 
 #[derive(Clone)]

@@ -1,24 +1,28 @@
+mod buffer;
 mod utils;
 
 use anyhow::{anyhow, Context, Result};
+use buffer::{IndexBuffer, VertexBuffer};
 use std::time::{Duration, Instant};
 use utils::{Mesh, Shader, Vertex};
 use winit::window::Window;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
-    },
-    Vertex {
         position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
+        color: [0.5, 0.0, 0.5],
     },
     Vertex {
         position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
+        color: [0.5, 0.0, 0.5],
+    },
+    Vertex {
+        position: [0.0, 0.5, 0.0],
+        color: [0.5, 0.0, 0.5],
     },
 ];
+
+const INDICES: &[u16] = &[0, 1, 2];
 
 pub struct Renderer {
     pub size: winit::dpi::PhysicalSize<u32>,
@@ -87,9 +91,8 @@ impl Renderer {
         let render_pipeline = shader.create_pipeline(&device, &sc_desc, &pipeline_layout, 1);
 
         let mesh = Mesh {
-            vertex_buffer: device
-                .create_buffer_with_data(bytemuck::cast_slice(VERTICES), wgpu::BufferUsage::VERTEX),
-            vertices_count: VERTICES.len() as u32,
+            vertex_buffer: VertexBuffer::create(&device, VERTICES),
+            index_buffer: IndexBuffer::create(&device, INDICES),
         };
 
         Ok(Self {
@@ -140,8 +143,9 @@ impl Renderer {
                 depth_stencil_attachment: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_vertex_buffer(0, &self.mesh.vertex_buffer, 0, 0);
-            render_pass.draw(0..self.mesh.vertices_count, 0..1);
+            render_pass.set_vertex_buffer(0, &self.mesh.vertex_buffer.buffer, 0, 0);
+            render_pass.set_index_buffer(&self.mesh.index_buffer.buffer, 0, 0);
+            render_pass.draw_indexed(0..self.mesh.index_buffer.count, 0, 0..1);
         }
 
         Ok((encoder, frame))
