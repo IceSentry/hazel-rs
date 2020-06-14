@@ -2,23 +2,23 @@ mod buffer;
 mod utils;
 
 use anyhow::{anyhow, Context, Result};
-use buffer::{IndexBuffer, VertexBuffer};
+use buffer::{IndexBuffer, Vertex, VertexBuffer};
 use std::time::{Duration, Instant};
-use utils::{Mesh, Shader, Vertex};
+use utils::{Mesh, Shader};
 use winit::window::Window;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [-0.5, -0.5, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [1.0, 0.0, 1.0, 1.0],
     },
     Vertex {
         position: [0.5, -0.5, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [0.0, 1.0, 1.0, 1.0],
     },
     Vertex {
         position: [0.0, 0.5, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [0.0, 0.0, 1.0, 1.0],
     },
 ];
 
@@ -88,12 +88,19 @@ impl Renderer {
             bind_group_layouts: &[],
         });
 
-        let render_pipeline = shader.create_pipeline(&device, &sc_desc, &pipeline_layout, 1);
-
         let mesh = Mesh {
             vertex_buffer: VertexBuffer::create(&device, VERTICES),
             index_buffer: IndexBuffer::create(&device, INDICES),
         };
+
+        let render_pipeline = shader.create_pipeline(
+            &device,
+            &sc_desc,
+            &pipeline_layout,
+            &mesh.vertex_buffer,
+            &mesh.index_buffer,
+            1,
+        );
 
         Ok(Self {
             size,

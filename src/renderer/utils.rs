@@ -1,26 +1,5 @@
 use super::buffer::{IndexBuffer, VertexBuffer};
 use anyhow::{Context, Result};
-use wgpu::vertex_attr_array;
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct Vertex {
-    pub position: [f32; 3],
-    pub color: [f32; 3],
-}
-unsafe impl bytemuck::Pod for Vertex {}
-unsafe impl bytemuck::Zeroable for Vertex {}
-
-impl Vertex {
-    fn buffer_desc<'a>() -> wgpu::VertexBufferDescriptor<'a> {
-        use std::mem;
-        wgpu::VertexBufferDescriptor {
-            stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::InputStepMode::Vertex,
-            attributes: &vertex_attr_array![0 => Float3, 1 => Float3],
-        }
-    }
-}
 
 pub struct Mesh {
     pub vertex_buffer: VertexBuffer,
@@ -71,6 +50,8 @@ impl Shader {
         device: &wgpu::Device,
         sc_desc: &wgpu::SwapChainDescriptor,
         pipeline_layout: &wgpu::PipelineLayout,
+        vertex_buffer: &VertexBuffer,
+        index_buffer: &IndexBuffer,
         samples: u32,
     ) -> wgpu::RenderPipeline {
         let vs_module = device.create_shader_module(&self.vertex_data);
@@ -102,8 +83,8 @@ impl Shader {
             primitive_topology: wgpu::PrimitiveTopology::TriangleList,
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
-                index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[Vertex::buffer_desc()],
+                index_format: index_buffer.format,
+                vertex_buffers: &[vertex_buffer.desc()],
             },
             sample_count: samples,
             sample_mask: !0,
