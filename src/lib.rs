@@ -3,16 +3,19 @@ pub mod input;
 pub mod layers;
 mod renderer;
 
-use layers::{imgui::ImguiLayer, LayerStack};
-use renderer::Renderer;
-
-use event::Event;
-use futures::executor::block_on;
+use event::process_event;
 use input::InputContext;
+use layers::{imgui::ImguiLayer, LayerStack};
+use renderer::{
+    buffer::{IndexBuffer, Vertex, VertexBuffer},
+    utils::{Mesh, Shader},
+    Renderer,
+};
 
 pub use imgui::Ui;
 
 use anyhow::Result;
+use futures::executor::block_on;
 use std::{
     cell::RefCell,
     path::PathBuf,
@@ -20,7 +23,7 @@ use std::{
     time::{Duration, Instant},
 };
 use winit::{
-    event::{ElementState, WindowEvent},
+    event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
     platform::desktop::EventLoopExtDesktop,
     window::{Window, WindowBuilder},
@@ -32,57 +35,81 @@ pub struct Application {
     pub delta_t: Duration,
     pub input_context: InputContext,
     pub v_sync: bool,
-    scale_factor: f64,
     window: Box<Window>,
     renderer: Renderer,
+    render_pipeline: wgpu::RenderPipeline,
+    mesh: Mesh,
 }
 
 impl Application {
-    pub fn quit(&mut self) {
-        self.running = false;
-    }
+    pub fn new(
+        name: &str,
+        imgui_ini_path: Option<PathBuf>,
+    ) -> Result<(Self, LayerStack, EventLoop<()>)> {
+        let event_loop = EventLoop::new();
+        let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
+        let v_sync = true;
 
-    fn process_event(&mut self, event: &winit::event::Event<()>) -> Option<Event> {
-        self.input_context.update(&event);
+        log::trace!("Window created");
 
-        if let winit::event::Event::WindowEvent { ref event, .. } = event {
-            match event {
-                WindowEvent::Resized(physical_size) => {
-                    self.renderer.resize(*physical_size, None);
-                    return Some(Event::WindowResize);
-                }
-                WindowEvent::ScaleFactorChanged {
-                    new_inner_size,
-                    scale_factor,
-                    ..
-                } => {
-                    self.renderer.resize(**new_inner_size, Some(*scale_factor));
-                    return Some(Event::ScaleFactorChanged);
-                }
-                WindowEvent::KeyboardInput { input, .. } => {
-                    if let Some(keycode) = input.virtual_keycode {
-                        return match input.state {
-                            ElementState::Pressed => Some(Event::KeyPressed(keycode)),
-                            ElementState::Released => Some(Event::KeyReleased(keycode)),
-                        };
-                    }
-                }
-                WindowEvent::MouseInput { button, state, .. } => {
-                    return match state {
-                        ElementState::Pressed => Some(Event::MouseButtonPressed(
-                            *button,
-                            self.input_context.mouse_position,
-                        )),
-                        ElementState::Released => Some(Event::MouseButtonReleased(
-                            *button,
-                            self.input_context.mouse_position,
-                        )),
-                    };
-                }
-                _ => {}
-            }
-        }
-        None
+        let clear_color = wgpu::Color {
+            r: 0.1,
+            g: 0.1,
+            b: 0.1,
+            a: 1.0,
+        };
+        let renderer = block_on(Renderer::new(&window, clear_color, v_sync))?;
+
+        log::trace!("Renderer created");
+
+        // FIXME this should probably not be here
+        let mesh = Mesh {
+            vertex_buffer: VertexBuffer::create(&renderer.device, VERTICES),
+            index_buffer: IndexBuffer::create(&renderer.device, INDICES),
+        };
+
+        let shader = Shader::compile(
+            String::from(include_str!("assets/shaders/vert.glsl")),
+            String::from(include_str!("assets/shaders/frag.glsl")),
+        )?;
+
+        log::trace!("Shaders compiled");
+
+        let render_pipeline = shader.create_pipeline(
+            &renderer.device,
+            &renderer.sc_desc,
+            &renderer.pipeline_layout,
+            &mesh.vertex_buffer,
+            &mesh.index_buffer,
+            1,
+        );
+
+        log::trace!("Render pipeline created");
+
+        let mut layer_stack = LayerStack::new();
+        // FIXME push the overlay in the run() fn to make sure it's the last one
+        layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(
+            imgui_ini_path,
+            v_sync,
+        ))));
+
+        log::trace!("Application created");
+
+        Ok((
+            Application {
+                name: String::from(name),
+                window: Box::new(window),
+                running: false,
+                delta_t: Duration::default(),
+                renderer,
+                input_context: InputContext::new(),
+                v_sync,
+                mesh,
+                render_pipeline,
+            },
+            layer_stack,
+            event_loop,
+        ))
     }
 
     pub fn run(
@@ -100,12 +127,14 @@ impl Application {
             *control_flow = if self.running {
                 ControlFlow::Poll
             } else {
+                log::info!("Close requested");
+                log::info!("Application stopping");
                 ControlFlow::Exit
             };
 
             layer_stack.on_winit_event(self, &event);
 
-            if let Some(event) = self.process_event(&event) {
+            if let Some(event) = process_event(self, &event) {
                 layer_stack.on_event(self, &event);
             }
 
@@ -114,7 +143,6 @@ impl Application {
                     event: WindowEvent::CloseRequested,
                     ..
                 } => {
-                    log::info!("Close requested; stopping");
                     *control_flow = ControlFlow::Exit;
                 }
                 winit::event::Event::MainEventsCleared => {
@@ -127,8 +155,18 @@ impl Application {
                     layer_stack.on_update(self);
 
                     if let Ok((mut encoder, frame)) = self.renderer.begin_render() {
+                        {
+                            let mut render_pass =
+                                self.renderer.begin_render_pass(&mut encoder, &frame);
+                            render_pass.set_pipeline(&self.render_pipeline);
+                            render_pass.set_vertex_buffer(0, &self.mesh.vertex_buffer.buffer, 0, 0);
+                            render_pass.set_index_buffer(&self.mesh.index_buffer.buffer, 0, 0);
+                            render_pass.draw_indexed(0..self.mesh.index_buffer.count, 0, 0..1);
+                        }
+
                         layer_stack.on_imgui_render(self);
                         layer_stack.on_wgpu_render(self, &mut encoder, &frame);
+
                         self.renderer.submit(encoder);
                     }
 
@@ -143,40 +181,25 @@ impl Application {
         log::info!("Application stopped");
         Ok(())
     }
+
+    pub fn quit(&mut self) {
+        self.running = false;
+    }
 }
 
-pub fn create_app(
-    name: &str,
-    imgui_ini_path: Option<PathBuf>,
-) -> Result<(Application, LayerStack, EventLoop<()>)> {
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
-    let v_sync = true;
+const VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        color: [1.0, 0.0, 1.0, 1.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        color: [0.0, 1.0, 1.0, 1.0],
+    },
+    Vertex {
+        position: [0.0, 0.5, 0.0],
+        color: [0.0, 0.0, 1.0, 1.0],
+    },
+];
 
-    log::trace!("Window created");
-
-    let renderer = block_on(Renderer::new(&window, v_sync))?;
-
-    log::trace!("Renderer created");
-
-    let mut layer_stack = LayerStack::new();
-    layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(
-        imgui_ini_path,
-        v_sync,
-    ))));
-
-    Ok((
-        Application {
-            name: String::from(name),
-            window: Box::new(window),
-            running: false,
-            scale_factor: 1.0,
-            delta_t: Duration::default(),
-            renderer,
-            input_context: InputContext::new(),
-            v_sync,
-        },
-        layer_stack,
-        event_loop,
-    ))
-}
+const INDICES: &[u16] = &[0, 1, 2];

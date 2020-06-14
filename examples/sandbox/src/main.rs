@@ -35,7 +35,7 @@ fn main() -> Result<(), anyhow::Error> {
     configure_logging();
 
     let (mut app, mut layer_stack, mut event_loop) =
-        hazel::create_app("Sandbox", Some(PathBuf::from("imgui.ini")))?;
+        Application::new("Sandbox", Some(PathBuf::from("imgui.ini")))?;
 
     layer_stack.push_layer(Rc::new(RefCell::new(ExampleLayer {})));
     layer_stack.push_layer(Rc::new(RefCell::new(IcedUiLayer::new())));

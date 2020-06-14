@@ -51,12 +51,14 @@ impl LayerStack {
     pub fn on_attach(&mut self, app: &mut Application) {
         for layer in self.layers.iter() {
             layer.borrow_mut().on_attach(app);
+            log::trace!("{} attached", layer.borrow().get_name());
         }
     }
 
     pub fn on_detach(&mut self, app: &mut Application) {
         for layer in self.layers.iter() {
             layer.borrow_mut().on_detach(app);
+            log::trace!("{} detached", layer.borrow().get_name());
         }
     }
 

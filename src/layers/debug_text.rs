@@ -33,8 +33,6 @@ impl Layer for DebugTextLayer {
             GlyphBrushBuilder::using_font(font)
                 .build(&app.renderer.device, app.renderer.sc_desc.format),
         );
-
-        log::trace!("debug_text attached");
     }
 
     fn on_wgpu_render(

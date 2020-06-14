@@ -29,7 +29,6 @@ impl Layer for ImguiLayer {
 
     fn on_attach(&mut self, app: &mut Application) {
         self.state = Some(ImguiState::new(app, self.ini_path.clone()));
-        log::trace!("imgui-layer attached");
     }
 
     fn on_winit_event(&mut self, app: &mut Application, event: &winit::event::Event<()>) {
@@ -123,9 +122,9 @@ impl ImguiState {
         platform.attach_window(imgui.io_mut(), &app.window, HiDpiMode::Default);
         imgui.set_ini_filename(ini_path);
 
-        let font_size = (13.0 * app.scale_factor) as f32;
+        let font_size = (13.0 * app.window.scale_factor()) as f32;
         let io = imgui.io_mut();
-        io.font_global_scale = (1.0 / app.scale_factor) as f32;
+        io.font_global_scale = (1.0 / app.window.scale_factor()) as f32;
 
         imgui.fonts().add_font(&[FontSource::DefaultFontData {
             config: Some(imgui::FontConfig {

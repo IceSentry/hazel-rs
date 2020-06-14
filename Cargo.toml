@@ -5,9 +5,9 @@ name    = 'hazel'
 version = '0.1.0'
 
 [dependencies]
-anyhow     = '1.0.31'
-derive-new = "0.5.8"
-
+anyhow              = '1.0.31'
+bytemuck            = "1.2.0"
+derive-new          = "0.5.8"
 futures             = '0.3.5'
 gfx-memory          = "=0.1.1"
 glam                = "0.8.7"
@@ -19,7 +19,6 @@ shaderc             = "0.6.2"
 wgpu_glyph          = '0.9.0'
 winit               = '0.22.2'
 winit_input_helper  = "0.7.0"
-bytemuck = "1.2.0"
 
   [dependencies.iced_winit]
   git = 'https://github.com/hecrj/iced'
