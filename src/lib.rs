@@ -7,8 +7,8 @@ use event::process_event;
 use input::InputContext;
 use layers::{imgui::ImguiLayer, LayerStack};
 use renderer::{
-    buffer::{IndexBuffer, Vertex, VertexBuffer},
-    utils::{Mesh, Shader},
+    buffer::{Vertex, VertexPos},
+    utils::{Shader, VertexArray},
     Renderer,
 };
 
@@ -37,8 +37,10 @@ pub struct Application {
     pub v_sync: bool,
     window: Box<Window>,
     renderer: Renderer,
-    render_pipeline: wgpu::RenderPipeline,
-    mesh: Mesh,
+    triangle_vertex_array: VertexArray<Vertex>,
+    triangle_render_pipeline: wgpu::RenderPipeline,
+    square_vertex_array: VertexArray<VertexPos>,
+    square_render_pipeline: wgpu::RenderPipeline,
 }
 
 impl Application {
@@ -75,11 +77,46 @@ impl Application {
         let renderer = block_on(Renderer::new(&window, clear_color, v_sync))?;
 
         log::trace!("Renderer created");
+        let triangle_vertex_array = {
+            let vertices = &[
+                Vertex {
+                    position: [-0.5, -0.5, 0.0],
+                    color: [1.0, 0.0, 1.0, 1.0],
+                },
+                Vertex {
+                    position: [0.5, -0.5, 0.0],
+                    color: [0.0, 1.0, 1.0, 1.0],
+                },
+                Vertex {
+                    position: [0.0, 0.5, 0.0],
+                    color: [0.0, 0.0, 1.0, 1.0],
+                },
+            ];
 
-        // FIXME this should probably not be here
-        let mesh = Mesh {
-            vertex_buffer: VertexBuffer::create(&renderer.device, VERTICES),
-            index_buffer: IndexBuffer::create(&renderer.device, INDICES),
+            let indices = &[0, 1, 2];
+
+            VertexArray::create(&renderer.device, vertices, indices)
+        };
+
+        let square_vertex_array = {
+            let vertices = &[
+                VertexPos {
+                    position: [-0.5, -0.5, 0.0],
+                },
+                VertexPos {
+                    position: [0.5, -0.5, 0.0],
+                },
+                VertexPos {
+                    position: [0.5, 0.5, 0.0],
+                },
+                VertexPos {
+                    position: [-0.5, 0.5, 0.0],
+                },
+            ];
+
+            let indices = &[0, 1, 2, 2, 3, 0];
+
+            VertexArray::create(&renderer.device, vertices, indices)
         };
 
         let shader = Shader::compile(
@@ -87,16 +124,17 @@ impl Application {
             String::from(include_str!("assets/shaders/frag.glsl")),
         )?;
 
+        let blue_shader = Shader::compile(
+            String::from(include_str!("assets/shaders/vert_blue.glsl")),
+            String::from(include_str!("assets/shaders/frag_blue.glsl")),
+        )?;
+
         log::trace!("Shaders compiled");
 
-        let render_pipeline = shader.create_pipeline(
-            &renderer.device,
-            &renderer.sc_desc,
-            &renderer.pipeline_layout,
-            &mesh.vertex_buffer,
-            &mesh.index_buffer,
-            1,
-        );
+        let triangle_render_pipeline = shader.create_pipeline(&renderer, &triangle_vertex_array, 1);
+
+        let square_render_pipeline =
+            blue_shader.create_pipeline(&renderer, &square_vertex_array, 1);
 
         log::trace!("Render pipeline created");
 
@@ -118,8 +156,10 @@ impl Application {
                 renderer,
                 input_context: InputContext::new(),
                 v_sync,
-                mesh,
-                render_pipeline,
+                triangle_vertex_array,
+                triangle_render_pipeline,
+                square_render_pipeline,
+                square_vertex_array,
             },
             layer_stack,
             event_loop,
@@ -173,10 +213,42 @@ impl Application {
                         {
                             let mut render_pass =
                                 self.renderer.begin_render_pass(&mut encoder, &frame);
-                            render_pass.set_pipeline(&self.render_pipeline);
-                            render_pass.set_vertex_buffer(0, &self.mesh.vertex_buffer.buffer, 0, 0);
-                            render_pass.set_index_buffer(&self.mesh.index_buffer.buffer, 0, 0);
-                            render_pass.draw_indexed(0..self.mesh.index_buffer.count, 0, 0..1);
+
+                            render_pass.set_pipeline(&self.square_render_pipeline);
+                            render_pass.set_vertex_buffer(
+                                0,
+                                &self.square_vertex_array.vertex_buffer.buffer,
+                                0,
+                                0,
+                            );
+                            render_pass.set_index_buffer(
+                                &self.square_vertex_array.index_buffer.buffer,
+                                0,
+                                0,
+                            );
+                            render_pass.draw_indexed(
+                                0..self.square_vertex_array.index_buffer.count,
+                                0,
+                                0..1,
+                            );
+
+                            render_pass.set_pipeline(&self.triangle_render_pipeline);
+                            render_pass.set_vertex_buffer(
+                                0,
+                                &self.triangle_vertex_array.vertex_buffer.buffer,
+                                0,
+                                0,
+                            );
+                            render_pass.set_index_buffer(
+                                &self.triangle_vertex_array.index_buffer.buffer,
+                                0,
+                                0,
+                            );
+                            render_pass.draw_indexed(
+                                0..self.triangle_vertex_array.index_buffer.count,
+                                0,
+                                0..1,
+                            );
                         }
 
                         layer_stack.on_imgui_render(self);
@@ -203,20 +275,3 @@ impl Application {
         self.running = false;
     }
 }
-
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [-0.5, -0.5, 0.0],
-        color: [1.0, 0.0, 1.0, 1.0],
-    },
-    Vertex {
-        position: [0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 1.0, 1.0],
-    },
-    Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [0.0, 0.0, 1.0, 1.0],
-    },
-];
-
-const INDICES: &[u16] = &[0, 1, 2];

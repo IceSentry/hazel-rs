@@ -1,9 +1,24 @@
-use super::buffer::{IndexBuffer, VertexBuffer};
+use super::{
+    buffer::{IndexBuffer, VertexBuffer, VertexBufferLayout},
+    Renderer,
+};
 use anyhow::{Context, Result};
 
-pub struct Mesh {
-    pub vertex_buffer: VertexBuffer,
+pub struct VertexArray<T> {
+    pub vertex_buffer: VertexBuffer<T>,
     pub index_buffer: IndexBuffer,
+}
+
+impl<T> VertexArray<T>
+where
+    T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
+{
+    pub fn create(device: &wgpu::Device, vertices: &[T], indices: &[u16]) -> Self {
+        Self {
+            vertex_buffer: VertexBuffer::create(device, vertices),
+            index_buffer: IndexBuffer::create(device, indices),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -45,50 +60,52 @@ impl Shader {
         })
     }
 
-    pub fn create_pipeline(
+    pub fn create_pipeline<T>(
         &self,
-        device: &wgpu::Device,
-        sc_desc: &wgpu::SwapChainDescriptor,
-        pipeline_layout: &wgpu::PipelineLayout,
-        vertex_buffer: &VertexBuffer,
-        index_buffer: &IndexBuffer,
+        renderer: &Renderer,
+        vertex_array: &VertexArray<T>,
         samples: u32,
-    ) -> wgpu::RenderPipeline {
-        let vs_module = device.create_shader_module(&self.vertex_data);
-        let fs_module = device.create_shader_module(&self.fragment_data);
+    ) -> wgpu::RenderPipeline
+    where
+        T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
+    {
+        let vs_module = renderer.device.create_shader_module(&self.vertex_data);
+        let fs_module = renderer.device.create_shader_module(&self.fragment_data);
 
-        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            layout: pipeline_layout,
-            vertex_stage: wgpu::ProgrammableStageDescriptor {
-                module: &vs_module,
-                entry_point: "main",
-            },
-            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &fs_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-            }),
-            color_states: &[wgpu::ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: wgpu::BlendDescriptor::REPLACE,
-                alpha_blend: wgpu::BlendDescriptor::REPLACE,
-                write_mask: wgpu::ColorWrite::ALL,
-            }],
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            depth_stencil_state: None,
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: index_buffer.format,
-                vertex_buffers: &[vertex_buffer.desc()],
-            },
-            sample_count: samples,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
-        })
+        renderer
+            .device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                layout: &renderer.pipeline_layout,
+                vertex_stage: wgpu::ProgrammableStageDescriptor {
+                    module: &vs_module,
+                    entry_point: "main",
+                },
+                fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+                    module: &fs_module,
+                    entry_point: "main",
+                }),
+                rasterization_state: Some(wgpu::RasterizationStateDescriptor {
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: wgpu::CullMode::Back,
+                    depth_bias: 0,
+                    depth_bias_slope_scale: 0.0,
+                    depth_bias_clamp: 0.0,
+                }),
+                color_states: &[wgpu::ColorStateDescriptor {
+                    format: renderer.sc_desc.format,
+                    color_blend: wgpu::BlendDescriptor::REPLACE,
+                    alpha_blend: wgpu::BlendDescriptor::REPLACE,
+                    write_mask: wgpu::ColorWrite::ALL,
+                }],
+                primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+                depth_stencil_state: None,
+                vertex_state: wgpu::VertexStateDescriptor {
+                    index_format: vertex_array.index_buffer.format,
+                    vertex_buffers: &[vertex_array.vertex_buffer.descriptor()],
+                },
+                sample_count: samples,
+                sample_mask: !0,
+                alpha_to_coverage_enabled: false,
+            })
     }
 }
