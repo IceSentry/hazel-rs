@@ -33,7 +33,13 @@ impl Layer for IcedUiLayer {
             app.window.scale_factor(),
         );
 
-        let controls = Controls::new();
+        let clear_color = Color {
+            r: app.renderer.clear_color.r as f32,
+            g: app.renderer.clear_color.g as f32,
+            b: app.renderer.clear_color.b as f32,
+            a: app.renderer.clear_color.a as f32,
+        };
+        let controls = Controls::new(clear_color);
 
         let mut debug = Debug::new();
         let mut renderer = Renderer::new(Backend::new(&app.renderer.device, Settings::default()));
@@ -137,9 +143,9 @@ pub enum Message {
 }
 
 impl Controls {
-    pub fn new() -> Controls {
+    pub fn new(background_color: Color) -> Controls {
         Controls {
-            background_color: Color::BLACK,
+            background_color,
             sliders: Default::default(),
         }
     }
