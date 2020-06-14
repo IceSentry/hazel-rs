@@ -1,6 +1,24 @@
-use crate::{layers::LayerStack, Application};
+mod utils;
+
+use anyhow::{anyhow, Context, Result};
 use std::time::{Duration, Instant};
+use utils::{Mesh, Shader, Vertex};
 use winit::window::Window;
+
+const VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [0.0, 0.5, 0.0],
+        color: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        color: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        color: [0.0, 0.0, 1.0],
+    },
+];
 
 pub struct Renderer {
     pub size: winit::dpi::PhysicalSize<u32>,
@@ -10,14 +28,15 @@ pub struct Renderer {
     pub device: wgpu::Device,
     pub sc_desc: wgpu::SwapChainDescriptor,
     pub queue: wgpu::Queue,
-    pub render_format: wgpu::TextureFormat,
     surface: wgpu::Surface,
     scale_factor: f64,
     swap_chain: wgpu::SwapChain,
+    render_pipeline: wgpu::RenderPipeline,
+    mesh: Mesh,
 }
 
 impl Renderer {
-    pub async fn new(window: &Window, v_sync: bool) -> Self {
+    pub async fn new(window: &Window, v_sync: bool) -> anyhow::Result<Self> {
         let size = window.inner_size();
         let surface = wgpu::Surface::create(window);
         let adapter = wgpu::Adapter::request(
@@ -28,7 +47,7 @@ impl Renderer {
             wgpu::BackendBit::PRIMARY, // Vulakn + Metal + DX12 + WebGPU
         )
         .await
-        .expect("Failed to request adapter");
+        .context("Failed to request adapter")?;
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -39,12 +58,11 @@ impl Renderer {
             })
             .await;
 
-        let render_format = wgpu::TextureFormat::Bgra8UnormSrgb;
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
             // We use wgpu::TextureFormat::Bgra8UnormSrgb because that's the format
             // that's guaranteed to be natively supported by the swapchains of all the APIs/platforms
-            format: render_format,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
             present_mode: if v_sync {
@@ -55,7 +73,24 @@ impl Renderer {
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
-        Self {
+        let shader = Shader::compile(
+            String::from(include_str!("shaders/shader.vert")),
+            String::from(include_str!("shaders/shader.frag")),
+        )?;
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            bind_group_layouts: &[],
+        });
+
+        let render_pipeline = shader.create_pipeline(&device, &sc_desc, &pipeline_layout, 1);
+
+        let mesh = Mesh {
+            vertex_buffer: device
+                .create_buffer_with_data(bytemuck::cast_slice(VERTICES), wgpu::BufferUsage::VERTEX),
+            vertices_count: VERTICES.len() as u32,
+        };
+
+        Ok(Self {
             size,
             last_frame: Instant::now(),
             last_frame_duration: Instant::now().elapsed(),
@@ -70,9 +105,48 @@ impl Renderer {
             device,
             sc_desc,
             swap_chain,
-            render_format,
             queue,
+            render_pipeline,
+            mesh,
+        })
+    }
+
+    pub fn begin_render(&mut self) -> Result<(wgpu::CommandEncoder, wgpu::SwapChainOutput)> {
+        let frame = match self.swap_chain.get_next_texture() {
+            Ok(frame) => frame,
+            Err(e) => {
+                log::error!("dropped frame");
+                return Err(anyhow!("dropped frame: {:?}", e));
+            }
+        };
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &frame.view,
+                    resolve_target: None,
+                    load_op: wgpu::LoadOp::Clear,
+                    store_op: wgpu::StoreOp::Store,
+                    clear_color: self.clear_color,
+                }],
+                depth_stencil_attachment: None,
+            });
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, &self.mesh.vertex_buffer, 0, 0);
+            render_pass.draw(0..self.mesh.vertices_count, 0..1);
         }
+
+        Ok((encoder, frame))
+    }
+
+    pub fn submit(&mut self, encoder: wgpu::CommandEncoder) {
+        self.queue.submit(&[encoder.finish()]);
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>, scale_factor: Option<f64>) {
@@ -85,7 +159,7 @@ impl Renderer {
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 
-    pub fn toggle_v_sync(&mut self, enabled: bool) {
+    pub fn set_v_sync(&mut self, enabled: bool) {
         self.sc_desc.present_mode = if enabled {
             wgpu::PresentMode::Fifo
         } else {
@@ -94,45 +168,4 @@ impl Renderer {
 
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
-}
-
-pub fn render(app: &mut Application, layer_stack: &mut LayerStack) {
-    let frame = match app.renderer.swap_chain.get_next_texture() {
-        Ok(frame) => frame,
-        Err(e) => {
-            log::error!("dropped frame: {:?}", e);
-            return;
-        }
-    };
-
-    let mut encoder = app
-        .renderer
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
-
-    clear(&frame.view, &mut encoder, app.renderer.clear_color);
-
-    layer_stack.on_imgui_render(app);
-    layer_stack.on_wgpu_render(app, &mut encoder, &frame);
-
-    app.renderer.queue.submit(&[encoder.finish()]);
-}
-
-pub fn clear<'a>(
-    target: &'a wgpu::TextureView,
-    encoder: &'a mut wgpu::CommandEncoder,
-    clear_color: wgpu::Color,
-) -> wgpu::RenderPass<'a> {
-    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-            attachment: target,
-            resolve_target: None,
-            load_op: wgpu::LoadOp::Clear,
-            store_op: wgpu::StoreOp::Store,
-            clear_color,
-        }],
-        depth_stencil_attachment: None,
-    })
 }

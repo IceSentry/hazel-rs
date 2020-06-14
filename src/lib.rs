@@ -4,7 +4,7 @@ pub mod layers;
 mod renderer;
 
 use layers::{imgui::ImguiLayer, LayerStack};
-use renderer::{render, Renderer};
+use renderer::Renderer;
 
 use event::Event;
 use futures::executor::block_on;
@@ -12,6 +12,7 @@ use input::InputContext;
 
 pub use imgui::Ui;
 
+use anyhow::Result;
 use std::{
     cell::RefCell,
     path::PathBuf,
@@ -125,7 +126,12 @@ impl Application {
 
                     layer_stack.on_update(self);
 
-                    render(self, layer_stack);
+                    if let Ok((mut encoder, frame)) = self.renderer.begin_render() {
+                        layer_stack.on_imgui_render(self);
+                        layer_stack.on_wgpu_render(self, &mut encoder, &frame);
+                        self.renderer.submit(encoder);
+                    }
+
                     self.renderer.last_frame_duration = self.delta_t;
                 }
                 _ => {}
@@ -142,14 +148,14 @@ impl Application {
 pub fn create_app(
     name: &str,
     imgui_ini_path: Option<PathBuf>,
-) -> Result<(Application, LayerStack, EventLoop<()>), anyhow::Error> {
+) -> Result<(Application, LayerStack, EventLoop<()>)> {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
     let v_sync = true;
 
     log::trace!("Window created");
 
-    let renderer = block_on(Renderer::new(&window, v_sync));
+    let renderer = block_on(Renderer::new(&window, v_sync))?;
 
     log::trace!("Renderer created");
 

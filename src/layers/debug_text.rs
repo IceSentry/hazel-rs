@@ -31,7 +31,7 @@ impl Layer for DebugTextLayer {
 
         self.glyph_brush = Some(
             GlyphBrushBuilder::using_font(font)
-                .build(&app.renderer.device, app.renderer.render_format),
+                .build(&app.renderer.device, app.renderer.sc_desc.format),
         );
 
         log::trace!("debug_text attached");

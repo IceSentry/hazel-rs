@@ -49,7 +49,7 @@ impl Layer for ImguiLayer {
         {
             if self.v_sync_checked != app.v_sync {
                 app.v_sync = self.v_sync_checked;
-                app.renderer.toggle_v_sync(app.v_sync);
+                app.renderer.set_v_sync(app.v_sync);
             }
 
             platform
