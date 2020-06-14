@@ -78,6 +78,8 @@ impl Renderer {
             String::from(include_str!("shaders/shader.frag")),
         )?;
 
+        log::trace!("Shaders compiled");
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             bind_group_layouts: &[],
         });
