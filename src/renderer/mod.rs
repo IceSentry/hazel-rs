@@ -1,4 +1,5 @@
 pub mod buffer;
+pub mod pipeline;
 pub mod utils;
 
 use anyhow::{anyhow, Context, Result};

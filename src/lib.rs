@@ -8,6 +8,7 @@ use input::InputContext;
 use layers::{imgui::ImguiLayer, LayerStack};
 use renderer::{
     buffer::{Vertex, VertexPos},
+    pipeline::Pipeline,
     utils::{Shader, VertexArray},
     Renderer,
 };
@@ -37,10 +38,8 @@ pub struct Application {
     pub v_sync: bool,
     window: Box<Window>,
     renderer: Renderer,
-    triangle_vertex_array: VertexArray<Vertex>,
-    triangle_render_pipeline: wgpu::RenderPipeline,
-    square_vertex_array: VertexArray<VertexPos>,
-    square_render_pipeline: wgpu::RenderPipeline,
+    triangle_pipeline: Pipeline<Vertex>,
+    square_pipeline: Pipeline<VertexPos>,
 }
 
 impl Application {
@@ -77,6 +76,19 @@ impl Application {
         let renderer = block_on(Renderer::new(&window, clear_color, v_sync))?;
 
         log::trace!("Renderer created");
+
+        let shader = Shader::compile(
+            String::from(include_str!("assets/shaders/vert.glsl")),
+            String::from(include_str!("assets/shaders/frag.glsl")),
+        )?;
+
+        let blue_shader = Shader::compile(
+            String::from(include_str!("assets/shaders/vert_blue.glsl")),
+            String::from(include_str!("assets/shaders/frag_blue.glsl")),
+        )?;
+
+        log::trace!("Shaders compiled");
+
         let triangle_vertex_array = {
             let vertices = &[
                 Vertex {
@@ -101,16 +113,16 @@ impl Application {
         let square_vertex_array = {
             let vertices = &[
                 VertexPos {
-                    position: [-0.5, -0.5, 0.0],
+                    position: [-0.75, -0.75, 0.0],
                 },
                 VertexPos {
-                    position: [0.5, -0.5, 0.0],
+                    position: [0.75, -0.75, 0.0],
                 },
                 VertexPos {
-                    position: [0.5, 0.5, 0.0],
+                    position: [0.75, 0.75, 0.0],
                 },
                 VertexPos {
-                    position: [-0.5, 0.5, 0.0],
+                    position: [-0.75, 0.75, 0.0],
                 },
             ];
 
@@ -119,22 +131,8 @@ impl Application {
             VertexArray::create(&renderer.device, vertices, indices)
         };
 
-        let shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert.glsl")),
-            String::from(include_str!("assets/shaders/frag.glsl")),
-        )?;
-
-        let blue_shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert_blue.glsl")),
-            String::from(include_str!("assets/shaders/frag_blue.glsl")),
-        )?;
-
-        log::trace!("Shaders compiled");
-
-        let triangle_render_pipeline = shader.create_pipeline(&renderer, &triangle_vertex_array, 1);
-
-        let square_render_pipeline =
-            blue_shader.create_pipeline(&renderer, &square_vertex_array, 1);
+        let triangle_pipeline = Pipeline::new(&renderer, &shader, triangle_vertex_array);
+        let square_pipeline = Pipeline::new(&renderer, &blue_shader, square_vertex_array);
 
         log::trace!("Render pipeline created");
 
@@ -156,10 +154,8 @@ impl Application {
                 renderer,
                 input_context: InputContext::new(),
                 v_sync,
-                triangle_vertex_array,
-                triangle_render_pipeline,
-                square_render_pipeline,
-                square_vertex_array,
+                triangle_pipeline,
+                square_pipeline,
             },
             layer_stack,
             event_loop,
@@ -214,41 +210,8 @@ impl Application {
                             let mut render_pass =
                                 self.renderer.begin_render_pass(&mut encoder, &frame);
 
-                            render_pass.set_pipeline(&self.square_render_pipeline);
-                            render_pass.set_vertex_buffer(
-                                0,
-                                &self.square_vertex_array.vertex_buffer.buffer,
-                                0,
-                                0,
-                            );
-                            render_pass.set_index_buffer(
-                                &self.square_vertex_array.index_buffer.buffer,
-                                0,
-                                0,
-                            );
-                            render_pass.draw_indexed(
-                                0..self.square_vertex_array.index_buffer.count,
-                                0,
-                                0..1,
-                            );
-
-                            render_pass.set_pipeline(&self.triangle_render_pipeline);
-                            render_pass.set_vertex_buffer(
-                                0,
-                                &self.triangle_vertex_array.vertex_buffer.buffer,
-                                0,
-                                0,
-                            );
-                            render_pass.set_index_buffer(
-                                &self.triangle_vertex_array.index_buffer.buffer,
-                                0,
-                                0,
-                            );
-                            render_pass.draw_indexed(
-                                0..self.triangle_vertex_array.index_buffer.count,
-                                0,
-                                0..1,
-                            );
+                            self.square_pipeline.draw(&mut render_pass);
+                            self.triangle_pipeline.draw(&mut render_pass);
                         }
 
                         layer_stack.on_imgui_render(self);
