@@ -20,10 +20,7 @@ where
         }
     }
 
-    pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>)
-    where
-        T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
-    {
+    pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_vertex_buffer(0, &self.vertex_array.vertex_buffer.buffer, 0, 0);
         render_pass.set_index_buffer(&self.vertex_array.index_buffer.buffer, 0, 0);

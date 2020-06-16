@@ -35,7 +35,7 @@ impl Layer for DebugTextLayer {
         );
     }
 
-    fn on_wgpu_render(
+    fn on_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,

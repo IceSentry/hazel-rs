@@ -80,7 +80,7 @@ impl Layer for IcedUiLayer {
         }
     }
 
-    fn on_wgpu_render(
+    fn on_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,

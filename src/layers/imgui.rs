@@ -85,7 +85,7 @@ impl Layer for ImguiLayer {
         ui.show_demo_window(&mut self.show_demo_window);
     }
 
-    fn on_wgpu_render(
+    fn on_render(
         &mut self,
         app: &mut Application,
         encoder: &mut wgpu::CommandEncoder,

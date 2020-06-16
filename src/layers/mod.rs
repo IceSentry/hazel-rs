@@ -11,7 +11,7 @@ pub trait Layer {
     fn on_attach(&mut self, _app: &mut Application) {}
     fn on_detach(&mut self, _app: &mut Application) {}
     fn on_update(&mut self, _app: &mut Application) {}
-    fn on_wgpu_render(
+    fn on_render(
         &mut self,
         _app: &mut Application,
         _encoder: &mut wgpu::CommandEncoder,
@@ -80,6 +80,16 @@ impl LayerStack {
         }
     }
 
+    // pub fn on_render<'a>(
+    //     &'a mut self,
+    //     app: &mut Application,
+    //     render_pass: &mut wgpu::RenderPass<'a>,
+    // ) {
+    //     for layer in self.layers.iter() {
+    //         layer.borrow_mut().on_render(app, render_pass);
+    //     }
+    // }
+
     pub fn on_imgui_render(&self, app: &mut Application) {
         unsafe {
             if let Some(ui) = imgui::current_ui() {
@@ -99,7 +109,7 @@ impl LayerStack {
         frame: &wgpu::SwapChainOutput,
     ) {
         for layer in self.layers.iter() {
-            layer.borrow_mut().on_wgpu_render(app, encoder, frame);
+            layer.borrow_mut().on_render(app, encoder, frame);
         }
     }
 

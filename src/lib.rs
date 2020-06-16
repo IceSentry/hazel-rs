@@ -1,19 +1,15 @@
 pub mod event;
 pub mod input;
 pub mod layers;
-mod renderer;
+pub mod renderer;
 
 use event::process_event;
 use input::InputContext;
 use layers::{imgui::ImguiLayer, LayerStack};
-use renderer::{
-    buffer::{Vertex, VertexPos},
-    pipeline::Pipeline,
-    utils::{Shader, VertexArray},
-    Renderer,
-};
+use renderer::Renderer;
 
 pub use imgui::Ui;
+pub use wgpu::{CommandEncoder, SwapChainOutput};
 
 use anyhow::Result;
 use futures::executor::block_on;
@@ -37,9 +33,7 @@ pub struct Application {
     pub input_context: InputContext,
     pub v_sync: bool,
     window: Box<Window>,
-    renderer: Renderer,
-    triangle_pipeline: Pipeline<Vertex>,
-    square_pipeline: Pipeline<VertexPos>,
+    pub renderer: Renderer,
 }
 
 impl Application {
@@ -77,65 +71,6 @@ impl Application {
 
         log::trace!("Renderer created");
 
-        let shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert.glsl")),
-            String::from(include_str!("assets/shaders/frag.glsl")),
-        )?;
-
-        let blue_shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert_blue.glsl")),
-            String::from(include_str!("assets/shaders/frag_blue.glsl")),
-        )?;
-
-        log::trace!("Shaders compiled");
-
-        let triangle_vertex_array = {
-            let vertices = &[
-                Vertex {
-                    position: [-0.5, -0.5, 0.0],
-                    color: [1.0, 0.0, 1.0, 1.0],
-                },
-                Vertex {
-                    position: [0.5, -0.5, 0.0],
-                    color: [0.0, 1.0, 1.0, 1.0],
-                },
-                Vertex {
-                    position: [0.0, 0.5, 0.0],
-                    color: [0.0, 0.0, 1.0, 1.0],
-                },
-            ];
-
-            let indices = &[0, 1, 2];
-
-            VertexArray::create(&renderer.device, vertices, indices)
-        };
-
-        let square_vertex_array = {
-            let vertices = &[
-                VertexPos {
-                    position: [-0.75, -0.75, 0.0],
-                },
-                VertexPos {
-                    position: [0.75, -0.75, 0.0],
-                },
-                VertexPos {
-                    position: [0.75, 0.75, 0.0],
-                },
-                VertexPos {
-                    position: [-0.75, 0.75, 0.0],
-                },
-            ];
-
-            let indices = &[0, 1, 2, 2, 3, 0];
-
-            VertexArray::create(&renderer.device, vertices, indices)
-        };
-
-        let triangle_pipeline = Pipeline::new(&renderer, &shader, triangle_vertex_array);
-        let square_pipeline = Pipeline::new(&renderer, &blue_shader, square_vertex_array);
-
-        log::trace!("Render pipeline created");
-
         let mut layer_stack = LayerStack::new();
         // FIXME push the overlay in the run() fn to make sure it's the last one
         layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(
@@ -154,8 +89,6 @@ impl Application {
                 renderer,
                 input_context: InputContext::new(),
                 v_sync,
-                triangle_pipeline,
-                square_pipeline,
             },
             layer_stack,
             event_loop,
@@ -206,14 +139,6 @@ impl Application {
                     layer_stack.on_update(self);
 
                     if let Ok((mut encoder, frame)) = self.renderer.begin_render() {
-                        {
-                            let mut render_pass =
-                                self.renderer.begin_render_pass(&mut encoder, &frame);
-
-                            self.square_pipeline.draw(&mut render_pass);
-                            self.triangle_pipeline.draw(&mut render_pass);
-                        }
-
                         layer_stack.on_imgui_render(self);
                         layer_stack.on_wgpu_render(self, &mut encoder, &frame);
 
