@@ -5,8 +5,8 @@ use hazel::{
     input::VirtualKeyCode,
     layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, Layer},
     renderer::{
-        buffer::{Vertex, VertexPos},
         pipeline::Pipeline,
+        primitives::{Vertex, VertexPos},
         utils::{Shader, VertexArray},
     },
     Application, CommandEncoder, SwapChainOutput,
