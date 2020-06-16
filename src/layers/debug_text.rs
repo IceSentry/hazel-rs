@@ -35,12 +35,7 @@ impl Layer for DebugTextLayer {
         );
     }
 
-    fn on_render(
-        &mut self,
-        app: &mut Application,
-        encoder: &mut wgpu::CommandEncoder,
-        frame: &wgpu::SwapChainOutput,
-    ) {
+    fn on_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
         let glyph_brush = self.glyph_brush.as_mut().unwrap();
         glyph_brush.queue(Section {
             text: vec![Text::new(&format!("Hello world from: {:?}", app.name))],
@@ -50,7 +45,7 @@ impl Layer for DebugTextLayer {
         if glyph_brush
             .draw_queued(
                 &app.renderer.device,
-                encoder,
+                &mut app.renderer.encoder,
                 &frame.view,
                 app.renderer.size.width,
                 app.renderer.size.height,

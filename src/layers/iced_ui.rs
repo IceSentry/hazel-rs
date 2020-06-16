@@ -80,19 +80,14 @@ impl Layer for IcedUiLayer {
         }
     }
 
-    fn on_render(
-        &mut self,
-        app: &mut Application,
-        encoder: &mut wgpu::CommandEncoder,
-        frame: &wgpu::SwapChainOutput,
-    ) {
+    fn on_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
         let layer_state = match self.state.as_mut() {
             Some(it) => it,
             _ => return,
         };
         let mouse_interaction = layer_state.renderer.backend_mut().draw(
             &app.renderer.device,
-            encoder,
+            &mut app.renderer.encoder,
             &frame.view,
             &layer_state.viewport,
             layer_state.state.primitive(),

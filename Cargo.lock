@@ -1712,6 +1712,7 @@ dependencies = [
  "anyhow",
  "env_logger",
  "hazel",
+ "imgui",
  "log",
  "log4rs",
 ]

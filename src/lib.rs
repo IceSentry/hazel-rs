@@ -9,7 +9,6 @@ use layers::{imgui::ImguiLayer, LayerStack};
 use renderer::{orthographic_camera::OrthographicCamera, Renderer};
 
 pub use imgui::Ui;
-pub use wgpu::{CommandEncoder, SwapChainOutput};
 
 use anyhow::Result;
 use futures::executor::block_on;
@@ -19,12 +18,15 @@ use std::{
     rc::Rc,
     time::{Duration, Instant},
 };
+use wgpu::SwapChainOutput;
 use winit::{
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
     platform::desktop::EventLoopExtDesktop,
     window::{Window, WindowBuilder},
 };
+
+pub type Frame = SwapChainOutput;
 
 pub struct Application {
     pub name: String,
@@ -142,11 +144,11 @@ impl Application {
 
                     layer_stack.on_update(self);
 
-                    if let Ok((mut encoder, frame)) = self.renderer.begin_render() {
-                        layer_stack.on_imgui_render(self);
-                        layer_stack.on_wgpu_render(self, &mut encoder, &frame);
+                    layer_stack.on_imgui_render(self);
 
-                        self.renderer.submit(encoder);
+                    if let Ok(frame) = self.renderer.begin_render() {
+                        layer_stack.on_wgpu_render(self, &frame);
+                        self.renderer.end_render();
                     }
 
                     self.renderer.last_frame_duration = self.delta_t;

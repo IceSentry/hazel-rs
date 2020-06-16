@@ -20,6 +20,7 @@ pub struct Renderer {
     surface: wgpu::Surface,
     scale_factor: f64,
     swap_chain: wgpu::SwapChain,
+    pub encoder: wgpu::CommandEncoder,
 }
 
 impl Renderer {
@@ -68,6 +69,10 @@ impl Renderer {
             bind_group_layouts: &[],
         });
 
+        let encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
+        });
+
         Ok(Self {
             size,
             last_frame: Instant::now(),
@@ -80,10 +85,11 @@ impl Renderer {
             swap_chain,
             queue,
             pipeline_layout,
+            encoder,
         })
     }
 
-    pub fn begin_render(&mut self) -> Result<(wgpu::CommandEncoder, wgpu::SwapChainOutput)> {
+    pub fn begin_render(&mut self) -> Result<wgpu::SwapChainOutput> {
         // this might potentially generate an infinite loop of dropped frame
         // maybe panic after a few dropped frame?
         let frame = self
@@ -92,16 +98,18 @@ impl Renderer {
             .map_err(|e| anyhow!("{:?}", e))
             .context("Dropped frame")?;
 
-        let encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-
-        Ok((encoder, frame))
+        Ok(frame)
     }
 
-    pub fn submit(&mut self, encoder: wgpu::CommandEncoder) {
+    pub fn end_render(&mut self) {
+        let next_encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render encoder"),
+            });
+
+        let encoder = std::mem::replace(&mut self.encoder, next_encoder);
+
         self.queue.submit(&[encoder.finish()]);
     }
 
@@ -125,20 +133,28 @@ impl Renderer {
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 
-    pub fn begin_render_pass<'a>(
-        &mut self,
-        encoder: &'a mut wgpu::CommandEncoder,
-        frame: &'a wgpu::SwapChainOutput,
-    ) -> wgpu::RenderPass<'a> {
-        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+    /// If the clear_color is set to none it will use the default renderer clear_color
+    pub fn clear(&mut self, frame: &wgpu::SwapChainOutput, clear_color: Option<[f64; 4]>) {
+        let [r, g, b, a] = {
+            match clear_color {
+                Some(clear_color) => clear_color,
+                None => [
+                    self.clear_color.r,
+                    self.clear_color.g,
+                    self.clear_color.b,
+                    self.clear_color.a,
+                ],
+            }
+        };
+        let _ = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                 attachment: &frame.view,
                 resolve_target: None,
                 load_op: wgpu::LoadOp::Clear,
                 store_op: wgpu::StoreOp::Store,
-                clear_color: self.clear_color,
+                clear_color: wgpu::Color { r, g, b, a },
             }],
             depth_stencil_attachment: None,
-        })
+        });
     }
 }

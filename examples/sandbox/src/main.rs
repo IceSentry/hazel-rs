@@ -9,8 +9,9 @@ use hazel::{
         primitives::{Vertex, VertexArray, VertexPos},
         shader::Shader,
     },
-    Application, CommandEncoder, SwapChainOutput,
+    Application, Frame, Ui,
 };
+use imgui::{im_str, Condition};
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 struct ExampleLayer {
@@ -101,21 +102,19 @@ impl Layer for ExampleLayer {
         }
     }
 
-    fn on_render(
-        &mut self,
-        app: &mut Application,
-        encoder: &mut CommandEncoder,
-        frame: &SwapChainOutput,
-    ) {
-        let mut render_pass = app.renderer.begin_render_pass(encoder, &frame);
-        self.square_pipeline
-            .as_mut()
-            .unwrap()
-            .draw(&mut render_pass);
-        self.triangle_pipeline
-            .as_mut()
-            .unwrap()
-            .draw(&mut render_pass);
+    fn on_render(&mut self, app: &mut Application, frame: &Frame) {
+        // Clear
+
+        app.renderer.clear(frame, None);
+
+        // set camera pos and rot
+
+        // BeginScene
+        // Submit
+        self.square_pipeline.as_mut().unwrap().draw(app, frame);
+        self.triangle_pipeline.as_mut().unwrap().draw(app, frame);
+
+        // EndScene
     }
 
     fn on_event(&mut self, app: &mut Application, event: &Event) {
@@ -127,6 +126,14 @@ impl Layer for ExampleLayer {
             }
             _ => {}
         }
+    }
+
+    fn on_imgui_render(&mut self, _app: &mut Application, ui: &Ui) {
+        imgui::Window::new(im_str!("Test"))
+            .position([0.0, 0.0], Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text(im_str!("Hello world"));
+            });
     }
 }
 

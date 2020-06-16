@@ -3,7 +3,7 @@ pub mod iced_ui;
 pub mod imgui;
 
 use crate::Ui;
-use crate::{event::Event, Application};
+use crate::{event::Event, Application, Frame};
 use std::{cell::RefCell, rc::Rc};
 
 pub trait Layer {
@@ -11,13 +11,7 @@ pub trait Layer {
     fn on_attach(&mut self, _app: &mut Application) {}
     fn on_detach(&mut self, _app: &mut Application) {}
     fn on_update(&mut self, _app: &mut Application) {}
-    fn on_render(
-        &mut self,
-        _app: &mut Application,
-        _encoder: &mut wgpu::CommandEncoder,
-        _frame: &wgpu::SwapChainOutput,
-    ) {
-    }
+    fn on_render(&mut self, _app: &mut Application, _frame: &Frame) {}
     fn on_event(&mut self, _app: &mut Application, _event: &Event) {}
     fn on_winit_event(&mut self, _app: &mut Application, _event: &winit::event::Event<()>) {}
     fn on_imgui_render(&mut self, _app: &mut Application, _ui: &Ui) {}
@@ -80,16 +74,8 @@ impl LayerStack {
         }
     }
 
-    // pub fn on_render<'a>(
-    //     &'a mut self,
-    //     app: &mut Application,
-    //     render_pass: &mut wgpu::RenderPass<'a>,
-    // ) {
-    //     for layer in self.layers.iter() {
-    //         layer.borrow_mut().on_render(app, render_pass);
-    //     }
-    // }
-
+    /// This needs to be called before on_wgpu_render
+    /// otherwise the imgui_layer won't have anything to render
     pub fn on_imgui_render(&self, app: &mut Application) {
         unsafe {
             if let Some(ui) = imgui::current_ui() {
@@ -102,14 +88,9 @@ impl LayerStack {
         }
     }
 
-    pub fn on_wgpu_render(
-        &mut self,
-        app: &mut Application,
-        encoder: &mut wgpu::CommandEncoder,
-        frame: &wgpu::SwapChainOutput,
-    ) {
+    pub fn on_wgpu_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
         for layer in self.layers.iter() {
-            layer.borrow_mut().on_render(app, encoder, frame);
+            layer.borrow_mut().on_render(app, frame);
         }
     }
 

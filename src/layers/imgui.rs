@@ -85,12 +85,7 @@ impl Layer for ImguiLayer {
         ui.show_demo_window(&mut self.show_demo_window);
     }
 
-    fn on_render(
-        &mut self,
-        app: &mut Application,
-        encoder: &mut wgpu::CommandEncoder,
-        frame: &wgpu::SwapChainOutput,
-    ) {
+    fn on_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
         if let Some(ImguiState {
             platform, renderer, ..
         }) = self.state.as_mut()
@@ -99,7 +94,12 @@ impl Layer for ImguiLayer {
                 if let Some(ui) = CURRENT_UI.take() {
                     platform.prepare_render(&ui, &app.window);
                     renderer
-                        .render(ui.render(), &app.renderer.device, encoder, &frame.view)
+                        .render(
+                            ui.render(),
+                            &app.renderer.device,
+                            &mut app.renderer.encoder,
+                            &frame.view,
+                        )
                         .expect("imgui rendering failed");
                 }
             }
