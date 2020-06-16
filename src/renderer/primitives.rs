@@ -1,4 +1,4 @@
-use super::buffer::VertexBufferLayout;
+use super::buffer::{IndexBuffer, VertexBuffer, VertexBufferLayout};
 use wgpu::vertex_attr_array;
 
 #[repr(C)]
@@ -36,6 +36,23 @@ impl VertexBufferLayout for Vertex {
             stride: mem::size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::InputStepMode::Vertex,
             attributes: &vertex_attr_array![0 => Float3, 1 => Float4],
+        }
+    }
+}
+
+pub struct VertexArray<T> {
+    pub vertex_buffer: VertexBuffer<T>,
+    pub index_buffer: IndexBuffer,
+}
+
+impl<T> VertexArray<T>
+where
+    T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
+{
+    pub fn create(device: &wgpu::Device, vertices: &[T], indices: &[u16]) -> Self {
+        Self {
+            vertex_buffer: VertexBuffer::create(device, vertices),
+            index_buffer: IndexBuffer::create(device, indices),
         }
     }
 }

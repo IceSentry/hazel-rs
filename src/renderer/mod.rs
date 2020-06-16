@@ -1,7 +1,8 @@
 pub mod buffer;
+pub mod orthographic_camera;
 pub mod pipeline;
 pub mod primitives;
-pub mod utils;
+pub mod shader;
 
 use anyhow::{anyhow, Context, Result};
 use std::time::{Duration, Instant};

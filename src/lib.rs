@@ -6,7 +6,7 @@ pub mod renderer;
 use event::process_event;
 use input::InputContext;
 use layers::{imgui::ImguiLayer, LayerStack};
-use renderer::Renderer;
+use renderer::{orthographic_camera::OrthographicCamera, Renderer};
 
 pub use imgui::Ui;
 pub use wgpu::{CommandEncoder, SwapChainOutput};
@@ -32,8 +32,9 @@ pub struct Application {
     pub delta_t: Duration,
     pub input_context: InputContext,
     pub v_sync: bool,
-    window: Box<Window>,
     pub renderer: Renderer,
+    camera: OrthographicCamera,
+    window: Box<Window>,
 }
 
 impl Application {
@@ -60,6 +61,8 @@ impl Application {
         let v_sync = true;
 
         log::trace!("Window created");
+
+        let camera = OrthographicCamera::new(-1.0, 1.0, -1.0, 1.0);
 
         let clear_color = wgpu::Color {
             r: 0.1,
@@ -89,6 +92,7 @@ impl Application {
                 renderer,
                 input_context: InputContext::new(),
                 v_sync,
+                camera,
             },
             layer_stack,
             event_loop,

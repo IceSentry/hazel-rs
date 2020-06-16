@@ -6,8 +6,8 @@ use hazel::{
     layers::{debug_text::DebugTextLayer, iced_ui::IcedUiLayer, Layer},
     renderer::{
         pipeline::Pipeline,
-        primitives::{Vertex, VertexPos},
-        utils::{Shader, VertexArray},
+        primitives::{Vertex, VertexArray, VertexPos},
+        shader::Shader,
     },
     Application, CommandEncoder, SwapChainOutput,
 };

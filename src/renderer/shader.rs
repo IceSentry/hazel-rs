@@ -1,25 +1,5 @@
-use super::{
-    buffer::{IndexBuffer, VertexBuffer, VertexBufferLayout},
-    Renderer,
-};
+use super::{buffer::VertexBufferLayout, primitives::VertexArray, Renderer};
 use anyhow::{Context, Result};
-
-pub struct VertexArray<T> {
-    pub vertex_buffer: VertexBuffer<T>,
-    pub index_buffer: IndexBuffer,
-}
-
-impl<T> VertexArray<T>
-where
-    T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
-{
-    pub fn create(device: &wgpu::Device, vertices: &[T], indices: &[u16]) -> Self {
-        Self {
-            vertex_buffer: VertexBuffer::create(device, vertices),
-            index_buffer: IndexBuffer::create(device, indices),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Shader {
