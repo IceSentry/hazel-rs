@@ -1,5 +1,5 @@
 use super::Layer;
-use crate::Application;
+use crate::{renderer::RenderCommand, Application};
 use derive_new::new;
 use iced_wgpu::{wgpu, Backend, Renderer, Settings, Viewport};
 use iced_winit::{
@@ -34,15 +34,16 @@ impl Layer for IcedUiLayer {
         );
 
         let clear_color = Color {
-            r: app.renderer.clear_color.r as f32,
-            g: app.renderer.clear_color.g as f32,
-            b: app.renderer.clear_color.b as f32,
-            a: app.renderer.clear_color.a as f32,
+            r: app.renderer.api.clear_color.r as f32,
+            g: app.renderer.api.clear_color.g as f32,
+            b: app.renderer.api.clear_color.b as f32,
+            a: app.renderer.api.clear_color.a as f32,
         };
         let controls = Controls::new(clear_color);
 
         let mut debug = Debug::new();
-        let mut renderer = Renderer::new(Backend::new(&app.renderer.device, Settings::default()));
+        let mut renderer =
+            Renderer::new(Backend::new(&app.renderer.api.device, Settings::default()));
 
         let state =
             program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
@@ -66,16 +67,10 @@ impl Layer for IcedUiLayer {
             if !state.is_queue_empty() {
                 state.update(None, viewport.logical_size(), renderer, debug);
                 let program = state.program();
-                app.renderer.clear_color = {
-                    let [r, g, b, a] = program.background_color.into_linear();
-
-                    wgpu::Color {
-                        r: r as f64,
-                        g: g as f64,
-                        b: b as f64,
-                        a: a as f64,
-                    }
-                };
+                let [r, g, b, a] = program.background_color.into_linear();
+                app.renderer.send(RenderCommand::SetClearColor([
+                    r as f64, g as f64, b as f64, a as f64,
+                ]));
             }
         }
     }
@@ -86,8 +81,8 @@ impl Layer for IcedUiLayer {
             _ => return,
         };
         let mouse_interaction = layer_state.renderer.backend_mut().draw(
-            &app.renderer.device,
-            &mut app.renderer.encoder,
+            &app.renderer.api.device,
+            &mut app.renderer.api.encoder,
             &frame.view,
             &layer_state.viewport,
             layer_state.state.primitive(),

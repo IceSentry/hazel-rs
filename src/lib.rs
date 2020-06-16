@@ -6,7 +6,7 @@ pub mod renderer;
 use event::process_event;
 use input::InputContext;
 use layers::{imgui::ImguiLayer, LayerStack};
-use renderer::{orthographic_camera::OrthographicCamera, Renderer};
+use renderer::{orthographic_camera::OrthographicCamera, renderer_api::RendererApi, Renderer};
 
 pub use imgui::Ui;
 
@@ -72,7 +72,11 @@ impl Application {
             b: 0.1,
             a: 1.0,
         };
-        let renderer = block_on(Renderer::new(&window, clear_color, v_sync))?;
+
+        let renderer = {
+            let renderer_api = block_on(RendererApi::new(&window, clear_color, v_sync))?;
+            Renderer::new(renderer_api)
+        };
 
         log::trace!("Renderer created");
 
@@ -139,22 +143,24 @@ impl Application {
                     self.window.request_redraw();
                 }
                 winit::event::Event::RedrawRequested(_) => {
-                    self.delta_t = self.renderer.last_frame.elapsed();
-                    self.renderer.last_frame = Instant::now();
+                    self.delta_t = self.renderer.api.last_frame.elapsed();
+                    self.renderer.api.last_frame = Instant::now();
 
-                    layer_stack.on_update(self);
+                    layer_stack.on_before_render(self);
 
                     layer_stack.on_imgui_render(self);
 
-                    if let Ok(frame) = self.renderer.begin_render() {
+                    if let Ok(frame) = self.renderer.api.begin_render() {
                         layer_stack.on_wgpu_render(self, &frame);
-                        self.renderer.end_render();
+                        self.renderer.api.end_render();
                     }
 
-                    self.renderer.last_frame_duration = self.delta_t;
+                    self.renderer.api.last_frame_duration = self.delta_t;
                 }
                 _ => {}
             }
+
+            layer_stack.on_update(self);
         });
 
         layer_stack.on_detach(self);

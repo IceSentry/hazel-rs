@@ -8,6 +8,7 @@ use hazel::{
         pipeline::Pipeline,
         primitives::{Vertex, VertexArray, VertexPos},
         shader::Shader,
+        RenderCommand,
     },
     Application, Frame, Ui,
 };
@@ -52,7 +53,7 @@ impl Layer for ExampleLayer {
 
             let indices = &[0, 1, 2];
 
-            VertexArray::create(&app.renderer.device, vertices, indices)
+            VertexArray::create(&app.renderer.api.device, vertices, indices)
         };
 
         let square_vertex_array = {
@@ -73,7 +74,7 @@ impl Layer for ExampleLayer {
 
             let indices = &[0, 1, 2, 2, 3, 0];
 
-            VertexArray::create(&app.renderer.device, vertices, indices)
+            VertexArray::create(&app.renderer.api.device, vertices, indices)
         };
 
         let shader = Shader::compile(
@@ -88,9 +89,13 @@ impl Layer for ExampleLayer {
         )
         .expect("failed to compile");
 
-        self.triangle_pipeline = Some(Pipeline::new(&app.renderer, &shader, triangle_vertex_array));
+        self.triangle_pipeline = Some(Pipeline::new(
+            &app.renderer.api,
+            &shader,
+            triangle_vertex_array,
+        ));
         self.square_pipeline = Some(Pipeline::new(
-            &app.renderer,
+            &app.renderer.api,
             &blue_shader,
             square_vertex_array,
         ));
@@ -104,17 +109,20 @@ impl Layer for ExampleLayer {
 
     fn on_render(&mut self, app: &mut Application, frame: &Frame) {
         // Clear
-
-        app.renderer.clear(frame, None);
+        app.renderer.send(RenderCommand::Clear(frame));
 
         // set camera pos and rot
 
         // BeginScene
+
+        app.renderer.begin_scene();
+
         // Submit
         self.square_pipeline.as_mut().unwrap().draw(app, frame);
         self.triangle_pipeline.as_mut().unwrap().draw(app, frame);
 
         // EndScene
+        app.renderer.end_scene();
     }
 
     fn on_event(&mut self, app: &mut Application, event: &Event) {

@@ -1,4 +1,6 @@
-use super::{buffer::VertexBufferLayout, primitives::VertexArray, shader::Shader, Renderer};
+use super::{
+    buffer::VertexBufferLayout, primitives::VertexArray, renderer_api::RendererApi, shader::Shader,
+};
 use crate::Application;
 
 pub struct Pipeline<T> {
@@ -10,7 +12,7 @@ impl<T> Pipeline<T>
 where
     T: VertexBufferLayout + bytemuck::Pod + bytemuck::Zeroable,
 {
-    pub fn new(renderer: &Renderer, shader: &Shader, vertex_array: VertexArray<T>) -> Self {
+    pub fn new(renderer: &RendererApi, shader: &Shader, vertex_array: VertexArray<T>) -> Self {
         Self {
             render_pipeline: shader.create_pipeline(renderer, &vertex_array, 1),
             vertex_array,
@@ -18,24 +20,25 @@ where
     }
 
     pub fn draw(&self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
-        let mut render_pass = app
-            .renderer
-            .encoder
-            .begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &frame.view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Load,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    },
-                }],
-                depth_stencil_attachment: None,
-            });
+        let mut render_pass =
+            app.renderer
+                .api
+                .encoder
+                .begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                        attachment: &frame.view,
+                        resolve_target: None,
+                        load_op: wgpu::LoadOp::Load,
+                        store_op: wgpu::StoreOp::Store,
+                        clear_color: wgpu::Color {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 0.0,
+                        },
+                    }],
+                    depth_stencil_attachment: None,
+                });
 
         render_pass.set_pipeline(&self.render_pipeline);
         // TODO

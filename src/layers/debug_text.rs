@@ -31,7 +31,7 @@ impl Layer for DebugTextLayer {
 
         self.glyph_brush = Some(
             GlyphBrushBuilder::using_font(font)
-                .build(&app.renderer.device, app.renderer.sc_desc.format),
+                .build(&app.renderer.api.device, app.renderer.api.sc_desc.format),
         );
     }
 
@@ -44,11 +44,11 @@ impl Layer for DebugTextLayer {
 
         if glyph_brush
             .draw_queued(
-                &app.renderer.device,
-                &mut app.renderer.encoder,
+                &app.renderer.api.device,
+                &mut app.renderer.api.encoder,
                 &frame.view,
-                app.renderer.size.width,
-                app.renderer.size.height,
+                app.renderer.api.size.width,
+                app.renderer.api.size.height,
             )
             .is_err()
         {

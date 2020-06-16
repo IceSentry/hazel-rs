@@ -40,15 +40,19 @@ impl Layer for ImguiLayer {
         }
     }
 
-    fn on_update(&mut self, app: &mut Application) {
-        let delta_t = app.delta_t;
+    fn on_before_render(&mut self, app: &mut Application) {
+        let delta_t = if app.delta_t.as_secs_f32() > 0.0 {
+            app.delta_t
+        } else {
+            return;
+        };
         if let Some(ImguiState {
             platform, context, ..
         }) = self.state.as_mut()
         {
             if self.v_sync_checked != app.v_sync {
                 app.v_sync = self.v_sync_checked;
-                app.renderer.set_v_sync(app.v_sync);
+                app.renderer.api.set_v_sync(app.v_sync);
             }
 
             platform
@@ -64,7 +68,7 @@ impl Layer for ImguiLayer {
 
     fn on_imgui_render(&mut self, app: &mut Application, ui: &imgui::Ui) {
         let curr_fps = 1.0 / app.delta_t.as_secs_f64();
-        let last_fps = 1.0 / app.renderer.last_frame_duration.as_secs_f64();
+        let last_fps = 1.0 / app.renderer.api.last_frame_duration.as_secs_f64();
         let fps = last_fps * 0.5 + curr_fps * 0.5; // this is supposed to smooth it out
 
         imgui::Window::new(im_str!("Debug info"))
@@ -96,8 +100,8 @@ impl Layer for ImguiLayer {
                     renderer
                         .render(
                             ui.render(),
-                            &app.renderer.device,
-                            &mut app.renderer.encoder,
+                            &app.renderer.api.device,
+                            &mut app.renderer.api.encoder,
                             &frame.view,
                         )
                         .expect("imgui rendering failed");
@@ -137,9 +141,9 @@ impl ImguiState {
 
         let renderer = imgui_wgpu::Renderer::new(
             &mut imgui,
-            &app.renderer.device,
-            &mut app.renderer.queue,
-            app.renderer.sc_desc.format,
+            &app.renderer.api.device,
+            &mut app.renderer.api.queue,
+            app.renderer.api.sc_desc.format,
             None,
         );
 

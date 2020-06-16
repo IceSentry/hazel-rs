@@ -17,7 +17,7 @@ pub fn process_event(app: &mut Application, event: &winit::event::Event<()>) -> 
     if let winit::event::Event::WindowEvent { ref event, .. } = event {
         match event {
             WindowEvent::Resized(physical_size) => {
-                app.renderer.resize(*physical_size, None);
+                app.renderer.api.resize(*physical_size, None);
                 return Some(Event::WindowResize);
             }
             WindowEvent::ScaleFactorChanged {
@@ -25,7 +25,9 @@ pub fn process_event(app: &mut Application, event: &winit::event::Event<()>) -> 
                 scale_factor,
                 ..
             } => {
-                app.renderer.resize(**new_inner_size, Some(*scale_factor));
+                app.renderer
+                    .api
+                    .resize(**new_inner_size, Some(*scale_factor));
                 return Some(Event::ScaleFactorChanged);
             }
             WindowEvent::KeyboardInput { input, .. } => {

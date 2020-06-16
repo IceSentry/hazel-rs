@@ -1,4 +1,4 @@
-use super::{buffer::VertexBufferLayout, primitives::VertexArray, Renderer};
+use super::{buffer::VertexBufferLayout, primitives::VertexArray, renderer_api::RendererApi};
 use anyhow::{Context, Result};
 
 #[derive(Clone)]
@@ -42,7 +42,7 @@ impl Shader {
 
     pub fn create_pipeline<T>(
         &self,
-        renderer: &Renderer,
+        renderer: &RendererApi,
         vertex_array: &VertexArray<T>,
         samples: u32,
     ) -> wgpu::RenderPipeline

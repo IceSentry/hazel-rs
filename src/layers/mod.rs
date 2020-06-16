@@ -12,6 +12,7 @@ pub trait Layer {
     fn on_detach(&mut self, _app: &mut Application) {}
     fn on_update(&mut self, _app: &mut Application) {}
     fn on_render(&mut self, _app: &mut Application, _frame: &Frame) {}
+    fn on_before_render(&mut self, _app: &mut Application) {}
     fn on_event(&mut self, _app: &mut Application, _event: &Event) {}
     fn on_winit_event(&mut self, _app: &mut Application, _event: &winit::event::Event<()>) {}
     fn on_imgui_render(&mut self, _app: &mut Application, _ui: &Ui) {}
@@ -85,6 +86,12 @@ impl LayerStack {
                     }
                 }
             }
+        }
+    }
+
+    pub fn on_before_render(&mut self, app: &mut Application) {
+        for layer in self.layers.iter() {
+            layer.borrow_mut().on_before_render(app);
         }
     }
 
