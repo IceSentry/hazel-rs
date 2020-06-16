@@ -18,7 +18,7 @@ pub struct ImguiLayer {
     state: Option<ImguiState>,
     #[new(value = "false")]
     show_demo_window: bool,
-    ini_path: Option<PathBuf>,
+    #[new(value = "true")]
     v_sync_checked: bool,
 }
 
@@ -28,7 +28,8 @@ impl Layer for ImguiLayer {
     }
 
     fn on_attach(&mut self, app: &mut Application) {
-        self.state = Some(ImguiState::new(app, self.ini_path.clone()));
+        self.v_sync_checked = app.v_sync;
+        self.state = Some(ImguiState::new(app, app.imgui_ini_path.clone()));
     }
 
     fn on_winit_event(&mut self, app: &mut Application, event: &winit::event::Event<()>) {

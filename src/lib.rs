@@ -27,13 +27,14 @@ pub type Frame = SwapChainOutput;
 
 pub struct Application {
     pub name: String,
-    pub running: bool,
     pub delta_t: Duration,
     pub input_context: InputContext,
     pub v_sync: bool,
     pub renderer: Renderer,
+    close_requested: bool,
     camera: OrthographicCamera,
     window: Box<Window>,
+    imgui_ini_path: Option<PathBuf>,
 }
 
 impl Application {
@@ -56,7 +57,10 @@ impl Application {
         imgui_ini_path: Option<PathBuf>,
     ) -> Result<(Self, LayerStack, EventLoop<()>)> {
         let event_loop = EventLoop::new();
-        let window = WindowBuilder::new().with_title(name).build(&event_loop)?;
+        let window = WindowBuilder::new()
+            .with_title(name)
+            .with_visible(false)
+            .build(&event_loop)?;
         let v_sync = true;
 
         log::trace!("Window created");
@@ -77,9 +81,7 @@ impl Application {
 
         log::trace!("Renderer created");
 
-        let mut layer_stack = LayerStack::new();
-        // FIXME push the overlay in the run() fn to make sure it's the last one
-        layer_stack.push_overlay(Box::new(ImguiLayer::new(imgui_ini_path, v_sync)));
+        let layer_stack = LayerStack::new();
 
         log::trace!("Application created");
 
@@ -87,12 +89,13 @@ impl Application {
             Application {
                 name: String::from(name),
                 window: Box::new(window),
-                running: false,
                 delta_t: Duration::default(),
                 renderer,
                 input_context: InputContext::new(),
                 v_sync,
                 camera,
+                imgui_ini_path,
+                close_requested: false,
             },
             layer_stack,
             event_loop,
@@ -100,9 +103,7 @@ impl Application {
     }
 
     pub fn close(&mut self) {
-        log::info!("Close requested");
-        log::info!("Application stopping");
-        self.running = false;
+        self.close_requested = true;
     }
 }
 
@@ -112,56 +113,52 @@ impl Application {
 pub fn run(app: Application, layer_stack: LayerStack, event_loop: EventLoop<()>) {
     let mut app = app;
     let mut layer_stack = layer_stack;
+
+    layer_stack.push_overlay(Box::new(ImguiLayer::new()));
     layer_stack.on_attach(&mut app);
 
-    app.running = true;
-
+    app.window.set_visible(true);
     log::info!("Application started");
 
-    event_loop.run(move |event, _, control_flow| {
-        layer_stack.on_winit_event(&mut app, &event);
-
-        if let Some(event) = process_event(&mut app, &event) {
-            layer_stack.on_event(&mut app, &event);
+    event_loop.run(move |event, _, control_flow| match event {
+        winit::event::Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } => {
+            app.close();
         }
+        winit::event::Event::MainEventsCleared => {
+            app.delta_t = app.renderer.api.last_frame.elapsed();
+            app.renderer.api.last_frame = Instant::now();
 
-        match event {
-            winit::event::Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                app.close();
+            layer_stack.on_before_render(&mut app);
+
+            if let Ok(frame) = app.renderer.api.begin_render() {
+                layer_stack.on_imgui_render(&mut app);
+                layer_stack.on_render(&mut app, &frame);
+
+                app.renderer.api.end_render();
             }
-            winit::event::Event::MainEventsCleared => {
-                layer_stack.on_update(&mut app);
 
-                app.window.request_redraw();
-            }
-            winit::event::Event::RedrawRequested(_) => {
-                app.delta_t = app.renderer.api.last_frame.elapsed();
-                app.renderer.api.last_frame = Instant::now();
+            layer_stack.on_update(&mut app);
 
-                layer_stack.on_before_render(&mut app);
-
-                if let Ok(frame) = app.renderer.api.begin_render() {
-                    layer_stack.on_imgui_render(&mut app);
-                    layer_stack.on_render(&mut app, &frame);
-
-                    app.renderer.api.end_render();
-                }
-
-                app.renderer.api.last_frame_duration = app.delta_t;
-                app.window.request_redraw();
-            }
-            _ => {}
+            app.renderer.api.last_frame_duration = app.delta_t;
         }
+        _ => {
+            layer_stack.on_winit_event(&mut app, &event);
 
-        *control_flow = if app.running {
-            ControlFlow::Poll
-        } else {
-            layer_stack.on_detach(&mut app);
-            log::info!("Application stopped");
-            ControlFlow::Exit
-        };
+            if let Some(event) = process_event(&mut app, &event) {
+                layer_stack.on_event(&mut app, &event);
+            }
+
+            if app.close_requested {
+                log::info!("Close requested");
+                log::info!("Application stopping");
+                layer_stack.on_detach(&mut app);
+                log::info!("Application stopped");
+                app.close_requested = false;
+                *control_flow = ControlFlow::Exit;
+            }
+        }
     });
 }

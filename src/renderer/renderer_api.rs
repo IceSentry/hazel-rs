@@ -16,6 +16,7 @@ pub struct RendererApi {
     scale_factor: f64,
     swap_chain: wgpu::SwapChain,
     pub encoder: wgpu::CommandEncoder,
+    pub v_sync: bool,
 }
 
 impl RendererApi {
@@ -81,6 +82,7 @@ impl RendererApi {
             queue,
             pipeline_layout,
             encoder,
+            v_sync,
         })
     }
 
@@ -119,6 +121,8 @@ impl RendererApi {
     }
 
     pub fn set_v_sync(&mut self, enabled: bool) {
+        self.v_sync = enabled;
+
         self.sc_desc.present_mode = if enabled {
             wgpu::PresentMode::Fifo
         } else {
