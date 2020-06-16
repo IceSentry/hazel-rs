@@ -4,21 +4,27 @@ pub mod imgui;
 
 use crate::Ui;
 use crate::{event::Event, Application, Frame};
-use std::{cell::RefCell, rc::Rc};
 
 pub trait Layer {
     fn get_name(&self) -> String;
+    /// Called before starting to poll events
     fn on_attach(&mut self, _app: &mut Application) {}
+    /// Called before closing the application
     fn on_detach(&mut self, _app: &mut Application) {}
+    /// Called once per frame
     fn on_update(&mut self, _app: &mut Application) {}
     fn on_render(&mut self, _app: &mut Application, _frame: &Frame) {}
+    /// Called right before on_render for setting up things like imgui context
     fn on_before_render(&mut self, _app: &mut Application) {}
+    /// Called on hazel events
     fn on_event(&mut self, _app: &mut Application, _event: &Event) {}
+    /// Called before hazel handle events, this is only to support external integrations like iced_winit
     fn on_winit_event(&mut self, _app: &mut Application, _event: &winit::event::Event<()>) {}
+    /// Called before on_render to setup custom imgui windows
     fn on_imgui_render(&mut self, _app: &mut Application, _ui: &Ui) {}
 }
 
-type LayerRef = Rc<RefCell<dyn Layer>>;
+type LayerRef = Box<dyn Layer>;
 
 #[derive(Default)]
 pub struct LayerStack {
@@ -44,60 +50,58 @@ impl LayerStack {
     }
 
     pub fn on_attach(&mut self, app: &mut Application) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_attach(app);
-            log::trace!("{} attached", layer.borrow().get_name());
+        for layer in self.layers.iter_mut() {
+            layer.on_attach(app);
+            log::trace!("{} attached", layer.get_name());
         }
     }
 
     pub fn on_detach(&mut self, app: &mut Application) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_detach(app);
-            log::trace!("{} detached", layer.borrow().get_name());
+        for layer in self.layers.iter_mut() {
+            layer.on_detach(app);
+            log::trace!("{} detached", layer.get_name());
         }
     }
 
     pub fn on_update(&mut self, app: &mut Application) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_update(app);
+        for layer in self.layers.iter_mut() {
+            layer.on_update(app);
         }
     }
 
     pub fn on_event(&mut self, app: &mut Application, event: &Event) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_event(app, event);
+        for layer in self.layers.iter_mut() {
+            layer.on_event(app, event);
         }
     }
 
     pub fn on_winit_event(&mut self, app: &mut Application, event: &winit::event::Event<()>) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_winit_event(app, event);
+        for layer in self.layers.iter_mut() {
+            layer.on_winit_event(app, event);
         }
     }
 
     /// This needs to be called before on_wgpu_render
     /// otherwise the imgui_layer won't have anything to render
-    pub fn on_imgui_render(&self, app: &mut Application) {
+    pub fn on_imgui_render(&mut self, app: &mut Application) {
         unsafe {
             if let Some(ui) = imgui::current_ui() {
-                for layer in self.layers.iter() {
-                    if layer.try_borrow_mut().is_ok() {
-                        layer.borrow_mut().on_imgui_render(app, ui);
-                    }
+                for layer in self.layers.iter_mut() {
+                    layer.on_imgui_render(app, ui);
                 }
             }
         }
     }
 
     pub fn on_before_render(&mut self, app: &mut Application) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_before_render(app);
+        for layer in self.layers.iter_mut() {
+            layer.on_before_render(app);
         }
     }
 
-    pub fn on_wgpu_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
-        for layer in self.layers.iter() {
-            layer.borrow_mut().on_render(app, frame);
+    pub fn on_render(&mut self, app: &mut Application, frame: &wgpu::SwapChainOutput) {
+        for layer in self.layers.iter_mut() {
+            layer.on_render(app, frame);
         }
     }
 
@@ -127,8 +131,8 @@ impl LayerStack {
 
 #[allow(dead_code)]
 #[allow(clippy::borrowed_box)]
-fn eq<T: ?Sized>(left: &Rc<RefCell<T>>, right: &Rc<RefCell<T>>) -> bool {
-    let left: *const T = left.as_ptr();
-    let right: *const T = right.as_ptr();
+fn eq<T: ?Sized>(left: &Box<T>, right: &Box<T>) -> bool {
+    let left: *const T = left.as_ref();
+    let right: *const T = right.as_ref();
     left == right
 }

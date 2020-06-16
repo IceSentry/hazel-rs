@@ -10,10 +10,10 @@ use hazel::{
         shader::Shader,
         RenderCommand,
     },
-    Application, Frame, Ui,
+    run, Application, Frame, Ui,
 };
 use imgui::{im_str, Condition};
-use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use std::path::PathBuf;
 
 struct ExampleLayer {
     triangle_pipeline: Option<Pipeline<Vertex>>,
@@ -113,15 +113,12 @@ impl Layer for ExampleLayer {
 
         // set camera pos and rot
 
-        // BeginScene
-
         app.renderer.begin_scene();
 
         // Submit
         self.square_pipeline.as_mut().unwrap().draw(app, frame);
         self.triangle_pipeline.as_mut().unwrap().draw(app, frame);
 
-        // EndScene
         app.renderer.end_scene();
     }
 
@@ -148,14 +145,15 @@ impl Layer for ExampleLayer {
 fn main() -> Result<(), anyhow::Error> {
     configure_logging();
 
-    let (mut app, mut layer_stack, mut event_loop) =
+    let (app, mut layer_stack, event_loop) =
         Application::new("Sandbox", Some(PathBuf::from("imgui.ini")))?;
 
-    layer_stack.push_layer(Rc::new(RefCell::new(ExampleLayer::new())));
-    layer_stack.push_layer(Rc::new(RefCell::new(IcedUiLayer::new())));
-    layer_stack.push_overlay(Rc::new(RefCell::new(DebugTextLayer::new())));
+    layer_stack.push_layer(Box::new(ExampleLayer::new()));
+    layer_stack.push_layer(Box::new(IcedUiLayer::new()));
+    layer_stack.push_overlay(Box::new(DebugTextLayer::new()));
 
-    app.run(&mut layer_stack, &mut event_loop)
+    run(app, layer_stack, event_loop);
+    Ok(())
 }
 
 fn configure_logging() {

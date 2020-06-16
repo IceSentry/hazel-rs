@@ -13,16 +13,13 @@ pub use imgui::Ui;
 use anyhow::Result;
 use futures::executor::block_on;
 use std::{
-    cell::RefCell,
     path::PathBuf,
-    rc::Rc,
     time::{Duration, Instant},
 };
 use wgpu::SwapChainOutput;
 use winit::{
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
-    platform::desktop::EventLoopExtDesktop,
     window::{Window, WindowBuilder},
 };
 
@@ -82,10 +79,7 @@ impl Application {
 
         let mut layer_stack = LayerStack::new();
         // FIXME push the overlay in the run() fn to make sure it's the last one
-        layer_stack.push_overlay(Rc::new(RefCell::new(ImguiLayer::new(
-            imgui_ini_path,
-            v_sync,
-        ))));
+        layer_stack.push_overlay(Box::new(ImguiLayer::new(imgui_ini_path, v_sync)));
 
         log::trace!("Application created");
 
@@ -105,73 +99,69 @@ impl Application {
         ))
     }
 
-    /// The main loop
-    /// You need to call this otherwise nothing will happen
-    /// This is where event are handled and this is where every licecycle hook is called
-    pub fn run(
-        &mut self,
-        layer_stack: &mut LayerStack,
-        event_loop: &mut EventLoop<()>,
-    ) -> Result<(), anyhow::Error> {
-        layer_stack.on_attach(self);
-
-        self.running = true;
-
-        log::info!("Application started");
-
-        event_loop.run_return(|event, _, control_flow| {
-            *control_flow = if self.running {
-                ControlFlow::Poll
-            } else {
-                ControlFlow::Exit
-            };
-
-            layer_stack.on_winit_event(self, &event);
-
-            if let Some(event) = process_event(self, &event) {
-                layer_stack.on_event(self, &event);
-            }
-
-            match event {
-                winit::event::Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    self.close();
-                }
-                winit::event::Event::MainEventsCleared => {
-                    self.window.request_redraw();
-                }
-                winit::event::Event::RedrawRequested(_) => {
-                    self.delta_t = self.renderer.api.last_frame.elapsed();
-                    self.renderer.api.last_frame = Instant::now();
-
-                    layer_stack.on_before_render(self);
-
-                    layer_stack.on_imgui_render(self);
-
-                    if let Ok(frame) = self.renderer.api.begin_render() {
-                        layer_stack.on_wgpu_render(self, &frame);
-                        self.renderer.api.end_render();
-                    }
-
-                    self.renderer.api.last_frame_duration = self.delta_t;
-                }
-                _ => {}
-            }
-
-            layer_stack.on_update(self);
-        });
-
-        layer_stack.on_detach(self);
-
-        log::info!("Application stopped");
-        Ok(())
-    }
-
     pub fn close(&mut self) {
         log::info!("Close requested");
         log::info!("Application stopping");
         self.running = false;
     }
+}
+
+/// The main loop
+/// You need to call this otherwise nothing will happen
+/// This is where event are handled and this is where every licecycle hook is called
+pub fn run(app: Application, layer_stack: LayerStack, event_loop: EventLoop<()>) {
+    let mut app = app;
+    let mut layer_stack = layer_stack;
+    layer_stack.on_attach(&mut app);
+
+    app.running = true;
+
+    log::info!("Application started");
+
+    event_loop.run(move |event, _, control_flow| {
+        layer_stack.on_winit_event(&mut app, &event);
+
+        if let Some(event) = process_event(&mut app, &event) {
+            layer_stack.on_event(&mut app, &event);
+        }
+
+        match event {
+            winit::event::Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                app.close();
+            }
+            winit::event::Event::MainEventsCleared => {
+                layer_stack.on_update(&mut app);
+
+                app.window.request_redraw();
+            }
+            winit::event::Event::RedrawRequested(_) => {
+                app.delta_t = app.renderer.api.last_frame.elapsed();
+                app.renderer.api.last_frame = Instant::now();
+
+                layer_stack.on_before_render(&mut app);
+
+                if let Ok(frame) = app.renderer.api.begin_render() {
+                    layer_stack.on_imgui_render(&mut app);
+                    layer_stack.on_render(&mut app, &frame);
+
+                    app.renderer.api.end_render();
+                }
+
+                app.renderer.api.last_frame_duration = app.delta_t;
+                app.window.request_redraw();
+            }
+            _ => {}
+        }
+
+        *control_flow = if app.running {
+            ControlFlow::Poll
+        } else {
+            layer_stack.on_detach(&mut app);
+            log::info!("Application stopped");
+            ControlFlow::Exit
+        };
+    });
 }
