@@ -103,6 +103,8 @@ impl Application {
     }
 
     pub fn close(&mut self) {
+        log::info!("Close requested");
+
         self.close_requested = true;
     }
 }
@@ -131,6 +133,8 @@ pub fn run(app: Application, layer_stack: LayerStack, event_loop: EventLoop<()>)
             app.delta_t = app.renderer.api.last_frame.elapsed();
             app.renderer.api.last_frame = Instant::now();
 
+            layer_stack.on_update(&mut app);
+
             layer_stack.on_before_render(&mut app);
 
             if let Ok(frame) = app.renderer.api.begin_render() {
@@ -140,24 +144,21 @@ pub fn run(app: Application, layer_stack: LayerStack, event_loop: EventLoop<()>)
                 app.renderer.api.end_render();
             }
 
-            layer_stack.on_update(&mut app);
-
             app.renderer.api.last_frame_duration = app.delta_t;
+
+            if app.close_requested {
+                log::info!("Application stopping");
+                layer_stack.on_detach(&mut app);
+                log::info!("Application stopped");
+                app.close_requested = false;
+                *control_flow = ControlFlow::Exit;
+            }
         }
         _ => {
             layer_stack.on_winit_event(&mut app, &event);
 
             if let Some(event) = process_event(&mut app, &event) {
                 layer_stack.on_event(&mut app, &event);
-            }
-
-            if app.close_requested {
-                log::info!("Close requested");
-                log::info!("Application stopping");
-                layer_stack.on_detach(&mut app);
-                log::info!("Application stopped");
-                app.close_requested = false;
-                *control_flow = ControlFlow::Exit;
             }
         }
     });

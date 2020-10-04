@@ -1,13 +1,13 @@
 [package]
-authors = [ 'IceSentry <c.giguere42@gmail.com>' ]
+authors = ['IceSentry <c.giguere42@gmail.com>']
 edition = '2018'
-name    = 'sandbox'
+name = 'sandbox'
 version = '0.1.0'
 
 [dependencies]
-anyhow     = "1.0.31"
+anyhow = "1.0.31"
 env_logger = '0.7.1'
-hazel      = { path = '../../' }
-imgui      = "0.4.0"
-log        = '0.4.8'
-log4rs     = '0.12.0'
+hazel = { path = '../../' }
+imgui = "0.5.0"
+log = '0.4.8'
+log4rs = '0.13.0'

@@ -1,7 +1,6 @@
 use super::{buffer::VertexBufferLayout, primitives::VertexArray, renderer_api::RendererApi};
 use anyhow::{Context, Result};
 
-#[derive(Clone)]
 pub struct Shader {
     vertex_data: Vec<u32>,
     fragment_data: Vec<u32>,

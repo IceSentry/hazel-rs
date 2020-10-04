@@ -42,11 +42,6 @@ impl Layer for ImguiLayer {
     }
 
     fn on_before_render(&mut self, app: &mut Application) {
-        let delta_t = if app.delta_t.as_secs_f32() > 0.0 {
-            app.delta_t
-        } else {
-            return;
-        };
         if let Some(ImguiState {
             platform, context, ..
         }) = self.state.as_mut()
@@ -60,7 +55,7 @@ impl Layer for ImguiLayer {
                 .prepare_frame(context.io_mut(), &app.window)
                 .expect("Failed to prepare frame");
 
-            context.io_mut().delta_time = delta_t.as_secs_f32();
+            context.io_mut().delta_time = app.delta_t.as_secs_f32();
             unsafe {
                 CURRENT_UI = Some(std::mem::transmute(context.frame()));
             }

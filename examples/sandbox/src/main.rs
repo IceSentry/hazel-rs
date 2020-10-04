@@ -15,17 +15,32 @@ use hazel::{
 use imgui::{im_str, Condition};
 use std::path::PathBuf;
 
+use log::{LevelFilter, SetLoggerError};
+use log4rs::{
+    append::{
+        console::{ConsoleAppender, Target},
+        file::FileAppender,
+    },
+    config::{Appender, Config, Logger, Root},
+    encode::pattern::PatternEncoder,
+    filter::threshold::ThresholdFilter,
+};
+use std::path::Path;
+
+struct State {
+    shader: Shader,
+    blue_shader: Shader,
+    triangle_vertex_array: VertexArray<Vertex>,
+    square_vertex_array: VertexArray<VertexPos>,
+}
+
 struct ExampleLayer {
-    triangle_pipeline: Option<Pipeline<Vertex>>,
-    square_pipeline: Option<Pipeline<VertexPos>>,
+    state: Option<State>,
 }
 
 impl ExampleLayer {
     fn new() -> Self {
-        Self {
-            triangle_pipeline: None,
-            square_pipeline: None,
-        }
+        Self { state: None }
     }
 }
 
@@ -77,28 +92,24 @@ impl Layer for ExampleLayer {
             VertexArray::create(&app.renderer.api.device, vertices, indices)
         };
 
-        let shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert.glsl")),
-            String::from(include_str!("assets/shaders/frag.glsl")),
-        )
-        .expect("failed to compile");
+        // let shader = Shader::compile(
+        //     String::from(include_str!("assets/shaders/vert.glsl")),
+        //     String::from(include_str!("assets/shaders/frag.glsl")),
+        // )
+        // .expect("failed to compile");
 
-        let blue_shader = Shader::compile(
-            String::from(include_str!("assets/shaders/vert_blue.glsl")),
-            String::from(include_str!("assets/shaders/frag_blue.glsl")),
-        )
-        .expect("failed to compile");
+        // let blue_shader = Shader::compile(
+        //     String::from(include_str!("assets/shaders/vert_blue.glsl")),
+        //     String::from(include_str!("assets/shaders/frag_blue.glsl")),
+        // )
+        // .expect("failed to compile");
 
-        self.triangle_pipeline = Some(Pipeline::new(
-            &app.renderer.api,
-            &shader,
-            triangle_vertex_array,
-        ));
-        self.square_pipeline = Some(Pipeline::new(
-            &app.renderer.api,
-            &blue_shader,
-            square_vertex_array,
-        ));
+        // self.state = Some(State {
+        //     shader,
+        //     blue_shader,
+        //     triangle_vertex_array,
+        //     square_vertex_array,
+        // })
     }
 
     fn on_update(&mut self, app: &mut Application) {
@@ -108,6 +119,12 @@ impl Layer for ExampleLayer {
     }
 
     fn on_render(&mut self, app: &mut Application, frame: &Frame) {
+        let state = if let Some(state) = self.state.as_ref() {
+            state
+        } else {
+            return;
+        };
+
         // Clear
         app.renderer.send(RenderCommand::Clear(frame));
 
@@ -116,8 +133,11 @@ impl Layer for ExampleLayer {
         app.renderer.begin_scene();
 
         // Submit
-        self.square_pipeline.as_mut().unwrap().draw(app, frame);
-        self.triangle_pipeline.as_mut().unwrap().draw(app, frame);
+
+        app.renderer
+            .submit(&state.blue_shader, &state.square_vertex_array, frame);
+        app.renderer
+            .submit(&state.shader, &state.triangle_vertex_array, frame);
 
         app.renderer.end_scene();
     }
@@ -134,11 +154,11 @@ impl Layer for ExampleLayer {
     }
 
     fn on_imgui_render(&mut self, _app: &mut Application, ui: &Ui) {
-        imgui::Window::new(im_str!("Test"))
-            .position([0.0, 0.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Hello world"));
-            });
+        // imgui::Window::new(im_str!("Test"))
+        //     .position([0.0, 0.0], Condition::FirstUseEver)
+        //     .build(&ui, || {
+        //         ui.text(im_str!("Hello world"));
+        //     });
     }
 }
 
